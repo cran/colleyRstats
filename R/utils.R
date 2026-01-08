@@ -18,20 +18,39 @@ not_empty <- function(x, msg = "Input must not be empty.") {
   invisible(TRUE)
 }
 
-# not in
-"%!in%" <- function(x, y) !("%in%"(x, y))
+#' Negate `%in%` membership
+#'
+#' @param x Vector of values to test.
+#' @param y Vector of values to match against.
+#' @return Logical vector indicating non-membership.
+#' @export
+not_in <- function(x, y) !(x %in% y)
 
-# replace NA with zero
-# e.g. df$test <- na.zero(df$test)
+#' @rdname not_in
+#' @export
+`%!in%` <- not_in
+
+
+#' Replace NA values with zero
+#'
+#' @param x A vector.
+#' @return A vector with NAs replaced by zeros.
+#' @export
+#' @examples
+#' na.zero(c(NA, 1, NA, 2))
 na.zero <- function(x) {
   x[is.na(x)] <- 0
   return(x)
 }
 
 
-#  Converting a Windows path to the format that works in R
-# No need for an argument. The path is printed to your console correctly and written to your clipboard for easy pasting to a script
-# From: https://stackoverflow.com/questions/8425409/file-path-issues-in-r-using-windows-hex-digits-in-character-string-error
+#' Convert Windows paths to R-friendly format
+#'
+#' @param path Path to convert or the string "clipboard" to read from the clipboard.
+#' @param read_fn Optional custom function to read from the clipboard.
+#' @param write_fn Optional custom function to write to the clipboard.
+#' @return A normalized path string.
+#' @export
 pathPrep <- function(path = "clipboard", read_fn = NULL, write_fn = NULL) {
   get_clip_reader <- function() {
     if (!is.null(read_fn)) {
@@ -73,7 +92,11 @@ pathPrep <- function(path = "clipboard", read_fn = NULL, write_fn = NULL) {
   return(x)
 }
 
-# for label of number of data points
+#' Build a median/size label for plot annotations
+#'
+#' @param x A numeric vector.
+#' @return A data frame with the median and label.
+#' @export
 n_fun <- function(x) {
   return(data.frame(y = median(x), label = paste0("n = ", length(x))))
 }
@@ -99,7 +122,7 @@ n_fun <- function(x) {
 #'     stat_sum_df(mean_fun)
 #' }
 stat_sum_df <- function(fun, geom = "crossbar", ...) {
-  stat_summary(fun.data = fun, colour = "red", geom = geom, width = 0.2, ...)
+  ggplot2::stat_summary(fun.data = fun, colour = "red", geom = geom, width = 0.2, ...)
 }
 
 #' This function normalizes the values in a vector to the range \[new_min, new_max\]
@@ -125,7 +148,9 @@ normalize <- function(x_vector, old_min, old_max, new_min, new_max) {
 #' @param x the x column
 #' @param y the y column
 #'
-#' @return TRUE if all groups are normal, FALSE otherwise
+#' @return TRUE if all groups are normal, FALSE otherwise. For groups with
+#'   n > 5000, Shapiro-Wilk is skipped and the function returns FALSE with a warning.
+#' @export
 check_normality_by_group <- function(data, x, y) {
   # Input validation
   if (missing(data) || missing(x) || missing(y)) stop("Missing arguments")
@@ -139,16 +164,32 @@ check_normality_by_group <- function(data, x, y) {
     data[[y]] <- val
   }
 
+  group_sizes <- data |>
+    dplyr::group_by(!!dplyr::sym(x)) |>
+    dplyr::summarise(n = dplyr::n(), .groups = "drop")
+
   results <- data |>
     dplyr::group_by(!!dplyr::sym(x)) |>
     dplyr::summarise(
-      p_value = if (dplyr::n() >= 3 && stats::var(!!dplyr::sym(y), na.rm = TRUE) > 0) {
-        stats::shapiro.test(!!dplyr::sym(y))$p.value
-      } else {
-        NA_real_ # Cannot test
+      p_value = {
+        values <- stats::na.omit(!!dplyr::sym(y))
+        if (length(values) >= 3 && stats::var(values, na.rm = TRUE) > 0) {
+          if (length(values) > 5000) {
+            sampled <- sample(values, size = 5000)
+            stats::shapiro.test(sampled)$p.value
+          } else {
+            stats::shapiro.test(values)$p.value
+          }
+        } else {
+          NA_real_ # Cannot test
+        }
       },
       .groups = "drop"
     )
+
+  if (any(group_sizes$n > 5000)) {
+    warning("Groups with n > 5000 were tested using a random sample of 5000 observations.", call. = FALSE)
+  }
 
   # If any group is significant (p < 0.05), data is NOT normal
   all_normal <- !any(results$p_value < 0.05, na.rm = TRUE)
@@ -164,6 +205,7 @@ check_normality_by_group <- function(data, x, y) {
 #' @param y the dependent variable (column name as string)
 #'
 #' @return TRUE if Levene's test is non-significant (p >= .05), FALSE otherwise
+#' @export
 check_homogeneity_by_group <- function(data, x, y) {
   not_empty(data)
   not_empty(x)
@@ -254,7 +296,7 @@ rFromWilcox <- function(wilcoxModel, N) {
 rFromWilcoxAdjusted <- function(wilcoxModel, N, adjustFactor) {
   not_empty(wilcoxModel)
   not_empty(N)
-  not_empty(N)
+  not_empty(adjustFactor)
 
   z <- stats::qnorm(wilcoxModel$p.value * adjustFactor / 2)
   r <- z / sqrt(N)
@@ -404,37 +446,57 @@ checkAssumptionsForAnova <- function(data, y, factors) {
   not_empty(y)
   not_empty(factors)
 
+  if (!requireNamespace("rstatix", quietly = TRUE)) {
+    stop("Package 'rstatix' is required for checkAssumptionsForAnova(). Please install it.")
+  }
+
+  emit_guidance <- function(text) {
+    message(text)
+    invisible(text)
+  }
+
+  extract_p_value <- function(test_result) {
+    if ("p" %in% names(test_result)) {
+      return(test_result$p)
+    }
+    if ("p.value" %in% names(test_result)) {
+      return(test_result$p.value)
+    }
+    NA_real_
+  }
+
   # Dynamically construct the formula based on the number of factors
   formula_string <- paste(y, "~", paste(factors, collapse = " * "))
   model <- lm(as.formula(formula_string), data = data)
 
   # Shapiro-Wilk test of normality on model residuals
-  model_results <- shapiro_test(residuals(model))
-  if (model_results$p.value < 0.05) {
-    return("You must take the non-parametric ANOVA as model is non-normal.")
+  model_results <- rstatix::shapiro_test(stats::residuals(model))
+  model_p <- extract_p_value(model_results)
+  if (!is.na(model_p) && model_p < 0.05) {
+    return(emit_guidance("You must take the non-parametric ANOVA as model is non-normal."))
   }
 
   # Check normality for each group
   test <- data |>
-    group_by(across(dplyr::all_of(factors))) |>
-    shapiro_test(!!sym(y))
+    dplyr::group_by(dplyr::across(dplyr::all_of(factors))) |>
+    rstatix::shapiro_test(!!rlang::sym(y))
 
   # Check if the normality assumption holds (p > 0.05 for all groups)
-  if (!(min(test$p) > 0.05)) {
-    return("You must take the non-parametric ANOVA as normality assumption by groups is violated (one or more p < 0.05).")
+  test_p <- extract_p_value(test)
+  if (all(is.na(test_p)) || min(test_p, na.rm = TRUE) <= 0.05) {
+    return(emit_guidance("You must take the non-parametric ANOVA as normality assumption by groups is violated (one or more p < 0.05)."))
   }
 
   # Homogeneity of variance assumption using Levene's Test
   levene_formula <- as.formula(paste(y, "~", paste(factors, collapse = " * ")))
-  levene_test_result <- levene_test(data, levene_formula)
+  levene_test_result <- rstatix::levene_test(data, levene_formula)
+  levene_p <- extract_p_value(levene_test_result)
 
-  if (levene_test_result$p < 0.05) {
-    return("You must take the non-parametric ANOVA as Levene's test is significant (p < 0.05).")
+  if (!is.na(levene_p) && levene_p < 0.05) {
+    return(emit_guidance("You must take the non-parametric ANOVA as Levene's test is significant (p < 0.05)."))
   }
 
-  message("You may take parametric ANOVA (function anova_test). See https://www.datanovia.com/en/lessons/anova-in-r/#check-assumptions-1 for more information.")
-
-  invisible(NULL)
+  emit_guidance("You may take parametric ANOVA (function anova_test). See https://www.datanovia.com/en/lessons/anova-in-r/#check-assumptions-1 for more information.")
 }
 
 
@@ -475,15 +537,52 @@ replace_values <- function(data, to_replace, replace_with) {
 
   # Apply replacements column-wise
   data[] <- lapply(data, function(column) {
-    # Convert factors to characters
-    if (is.factor(column)) column <- as.character(column)
+    # Convert factors to characters and restore factor levels after replacement
+    if (is.factor(column)) {
+      column_chr <- as.character(column)
+      replaced <- ifelse(!is.na(column_chr) & column_chr %in% names(replace_map),
+        replace_map[column_chr],
+        column_chr
+      )
+      new_levels <- unique(c(levels(column), replace_with))
+      return(factor(replaced, levels = new_levels))
+    }
 
-    # Replace values using replace_map
-    column <- ifelse(!is.na(column) & column %in% names(replace_map),
-      replace_map[column],
-      column
+    # Replace values for character columns
+    if (is.character(column)) {
+      return(ifelse(!is.na(column) & column %in% names(replace_map),
+        replace_map[column],
+        column
+      ))
+    }
+
+    # Replace values for logical/numeric columns only if replacements are compatible
+    column_chr <- as.character(column)
+    replaced_chr <- ifelse(!is.na(column_chr) & column_chr %in% names(replace_map),
+      replace_map[column_chr],
+      column_chr
     )
-    return(column)
+
+    if (is.logical(column)) {
+      coerced <- as.logical(replaced_chr)
+      if (any(is.na(coerced) & !is.na(replaced_chr))) {
+        stop("Replacement values are incompatible with logical columns.")
+      }
+      return(coerced)
+    }
+
+    if (is.numeric(column) || is.integer(column)) {
+      coerced <- suppressWarnings(as.numeric(replaced_chr))
+      if (any(is.na(coerced) & !is.na(replaced_chr))) {
+        stop("Replacement values are incompatible with numeric columns.")
+      }
+      if (is.integer(column)) {
+        return(as.integer(coerced))
+      }
+      return(coerced)
+    }
+
+    column
   })
 
   return(data)
@@ -498,8 +597,6 @@ replace_values <- function(data, to_replace, replace_with) {
 #' and appends those sections under the first section, aligning by column index.
 #'
 #' Relevant if you receive data in wide-format but cannot use built-in functionality due to naming (e.g., in LimeSurvey)
-#'
-#' Attention, known bug: the ID column will first have only the IDs, this has to be fixed manually.
 #'
 #' @param input_filepath String, the file path of the input Excel file.
 #' @param sheetName String, the name of the sheet to read from the Excel file. Default is "Results".
@@ -551,30 +648,20 @@ reshape_data <- function(input_filepath, sheetName = "Results", marker = "videoi
   sheet_to_read <- if (sheetName %in% available_sheets) sheetName else available_sheets[[1]]
   df <- readxl::read_excel(input_filepath, sheet = sheet_to_read)
 
-  # Initialize an empty data frame to store the final long-form data
-  long_df <- data.frame()
-
   # Initialize an empty vector to store the current columns for each marker section
   current_columns <- c()
 
   # Extract the custom "ID" column
-  id_column <- df |> select(dplyr::all_of(id_col))
+  id_column <- df |> dplyr::select(dplyr::all_of(id_col))
 
-  # Loop through each column to identify given markers and reshape data accordingly
-  for (col in names(df)) {
+  # Loop through each column (excluding ID) to identify given markers and reshape data accordingly
+  slices <- list()
+  data_columns <- setdiff(names(df), id_col)
+  for (col in data_columns) {
     if (startsWith(col, marker)) {
       if (length(current_columns) > 0) {
-        # print(length(current_columns))
-        sliced_df <- df |> select(dplyr::all_of(current_columns))
-
-        if (nrow(long_df) > 0) {
-          # Add the ID column to the front of sliced_df
-          sliced_df <- bind_cols(id_column, sliced_df)
-          # Remove column names for alignment by index
-          colnames(sliced_df) <- colnames(long_df)
-        }
-
-        long_df <- bind_rows(long_df, sliced_df, .id = NULL) # Added .id = NULL to handle data types
+        sliced_df <- df |> dplyr::select(dplyr::all_of(current_columns))
+        slices[[length(slices) + 1]] <- dplyr::bind_cols(id_column, sliced_df)
       }
       current_columns <- c()
     } else {
@@ -583,10 +670,19 @@ reshape_data <- function(input_filepath, sheetName = "Results", marker = "videoi
   }
 
   if (length(current_columns) > 0) {
-    sliced_df <- df |> select(dplyr::all_of(current_columns))
-    sliced_df <- bind_cols(id_column, sliced_df)
-    colnames(sliced_df) <- colnames(long_df)
-    long_df <- bind_rows(long_df, sliced_df)
+    sliced_df <- df |> dplyr::select(dplyr::all_of(current_columns))
+    slices[[length(slices) + 1]] <- dplyr::bind_cols(id_column, sliced_df)
+  }
+
+  if (length(slices) == 0) {
+    long_df <- dplyr::bind_cols(id_column, df |> dplyr::select(-dplyr::all_of(id_col)))
+  } else {
+    base_names <- names(slices[[1]])
+    slices <- lapply(slices, function(slice) {
+      names(slice) <- base_names
+      slice
+    })
+    long_df <- dplyr::bind_rows(slices, .id = NULL)
   }
 
   # Check if file exists and modify output_filepath to avoid overwriting
@@ -637,7 +733,7 @@ add_pareto_emoa_column <- function(data, objectives) {
   not_empty(objectives)
 
   # Select only the objective columns
-  objective_data <- data |> select(dplyr::all_of(objectives))
+  objective_data <- data |> dplyr::select(dplyr::all_of(objectives))
 
   # If there's only one row, mark it as PARETO_EMOA directly
   if (nrow(objective_data) == 1) {

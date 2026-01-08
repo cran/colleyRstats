@@ -1,25 +1,33 @@
-# rCode: Enhanced R Functions for Statistical Analysis and Reporting
+# `{colleyRstats}`: Functions to Streamline Statistical Analysis and Reporting
 
 > Created by [Mark Colley](https://m-colley.github.io/)
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.16875755.svg)](https://doi.org/10.5281/zenodo.16875755)
 
-`rCode` is a collection of custom R functions that streamline statistical analysis and result reporting. Built upon popular R packages such as [ggstatsplot](https://github.com/IndrajeetPatil/ggstatsplot) and [ARTool](https://github.com/mjskay/ARTool), this collection offers a wide array of tools for simplifying reproducible analyses, generating high-quality visualizations, and producing APA-compliant outputs.
 
-The primary goal of this package is to significantly reduce repetitive coding efforts, allowing you to focus on interpreting results. Whether you're dealing with ANOVA assumptions, reporting effect sizes, or creating publication-ready visualizations, `rCode` makes these tasks easier.
+
+| Status | Usage | Miscellaneous |
+|----|----|----|
+| [![R build status](https://github.com/M-Colley/colleyRstats/workflows/R-CMD-check/badge.svg)](https://github.com/M-Colley/colleyRstats) | [![Total downloads](https://cranlogs.r-pkg.org/badges/grand-total/colleyRstats?color=blue)](https://CRAN.R-project.org/package=colleyRstats) | [![codecov](https://codecov.io/gh/M-Colley/colleyRstats/branch/main/graph/badge.svg?token=ddrxwt0bj8)](https://app.codecov.io/gh/M-Colley/colleyRstats) |
+| [![lifecycle](https://img.shields.io/badge/lifecycle-experimental-red.svg)](https://lifecycle.r-lib.org/articles/stages.html) | [![Daily downloads](https://cranlogs.r-pkg.org/badges/last-day/colleyRstats?color=blue)](https://CRAN.R-project.org/package=colleyRstats) | [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18046754.svg)](https://doi.org/10.5281/zenodo.18046754) |
+
+
+
+`colleyRstats` is a collection of custom R functions that streamline statistical analysis and result reporting. Built upon popular R packages such as [ggstatsplot](https://github.com/IndrajeetPatil/ggstatsplot) and [ARTool](https://github.com/mjskay/ARTool), this collection offers a wide array of tools for simplifying reproducible analyses, generating high-quality visualizations, and producing APA-compliant outputs.
+
+The primary goal of this package is to significantly reduce repetitive coding efforts, allowing you to focus on interpreting results. Whether you're dealing with ANOVA assumptions, reporting effect sizes, or creating publication-ready visualizations, `colleyRstats` makes these tasks easier.
 
 ## Key Features
 - **Automated Assumption Checking**: For ANOVA models, automatically verify normality and homogeneity of variance.
-- **Enhanced ggstatsplot Functions**: Easily switch between parametric and non-parametric versions of tests based on the data's characteristics.
+- **Enhanced colleyRstats Functions**: Easily switch between parametric and non-parametric versions of tests based on the data's characteristics.
 - **APA-Compliant Reporting**: Copy-paste-ready results in LaTeX format, suitable for academic publications.
 - **Custom Visualizations**: Generate effect plots and multi-objective optimization plots with minimal effort.
 - **Pareto Analysis and Post-Hoc Tests**: Automate these analyses and produce formatted outputs.
 
 ## Installation
 
-| Type        | Command                                                 |
-|-------------|---------------------------------------------------------|                  
-| Development | `devtools::source_url("https://raw.githubusercontent.com/M-Colley/rCode/main/r_functionality.R")` |
+| Type        | Command                                  |
+|:------------|:-----------------------------------------|
+| Release     | `install.packages("colleyRstats")`       |
 
 ## Summary of Benefits 
 - **Code Reduction**: Automates common tasks in data analysis, such as assumption checks and reporting.
@@ -74,6 +82,8 @@ Generates APA-compliant LaTeX output for within-subject designs analyzed using n
 \newcommand{\p}{\textit{p=}}
 \newcommand{\pminor}{\textit{p$<$}}
 ```
+
+**Deprecated:** `reportNPAV()` will be removed in colleyRstats 0.1.0 (2025-12-31). Use `reportART()` with ARTool instead.
 
 **Example:**
 
@@ -144,7 +154,7 @@ reportART(anova(model), "Dependent Variable")
 ### `add_pareto_emoa_column`
 This function adds a Pareto front classification column to a dataset, useful in multi-objective optimization scenarios.
 
-Attention: must be done per User - Conditon etc group.
+Attention: must be done per User - Condition etc group.
 
 **Example:**
 
@@ -196,7 +206,7 @@ new_df <- replace_values(main_df, to_replace = c("bad_val1", "bad_val2"), replac
 
 ## Using NPAV (Lüpsen) with this package
 
-`reportNPAV()` formats results from Lüpsen’s nonparametric ANOVA (`np.anova`) output. NPAV is not shipped with this package, and it is loaded manually by the user from Lüpsen’s site: `https://www.uni-koeln.de/~luepsen/R/`.
+`reportNPAV()` formats results from Lüpsen’s nonparametric ANOVA (`np.anova`) output. **Deprecated:** `reportNPAV()` will be removed in colleyRstats 0.1.0 (2025-12-31). Use `reportART()` with ARTool instead. NPAV is not shipped with this package, and it is loaded manually by the user from Lüpsen’s site: `https://www.uni-koeln.de/~luepsen/R/`.
 
 This step requires internet access, so it is documented here (not in `@examples`, which should run offline during package checks).
 
@@ -229,6 +239,7 @@ model <- npav_env$np.anova(
 )
 
 reportNPAV(model, dv = "mental workload")
+```
 
 If download.file() is blocked in your environment, download anova.lib manually from the NPAV page and point npav_file to the local path
 
@@ -244,21 +255,32 @@ For questions or remarks, please contact [Mark Colley](https://m-colley.github.i
 ## Citations
 
 ```bibtex
-@misc{colley2024rcode,
+@misc{colley2025rstats,
   author       = {Mark Colley},
-  title        = {rCode: Enhanced R Functions for Statistical Analysis and Reporting},
-  year         = {2024},
-  howpublished = {\url{https://github.com/M-Colley/rCode}},
+  title        = {colleyRstats: Functions to Streamline Statistical Analysis and Reporting},
+  year         = {2025},
+  howpublished = {\url{https://github.com/M-Colley/colleyRstats}},
   note         = {A collection of custom R functions for streamlining statistical analysis, visualizations, and APA-compliant reporting.},
-  doi          = {10.5281/zenodo.16875755},
-  url          = {https://doi.org/10.5281/zenodo.16875755},
+  doi          = {10.5281/zenodo.18046754},
+  url          = {https://doi.org/10.5281/zenodo.18046754},
 }
 ```
 
 
+## Contributing
 
+I am happy to receive any bug reports, suggestions, questions, and contributions to fix problems and add features. 
+Please use the `GitHub` issues system. Pull Requests for contributions
+are encouraged.
 
+The following presents some simple ways in which you can contribute (in increasing
+order of commitment):
 
+- Read and correct any inconsistencies in the
+  [documentation](https://github.com/M-Colley/colleyRstats)
+- Raise issues about bugs or wanted features
+- Review code
+- Add new functionality (in the form of new reporting or plotting functions)
 
 
 

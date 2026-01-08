@@ -3,6 +3,9 @@
 #' P-values are rounded for the third digit and partial eta squared values are provided when possible.
 #' Attention: the independent variables of the formula and the term specifying the participant must be factors (i.e., use as.factor()).
 #'
+#' Deprecated: `reportNPAV()` will be removed in colleyRstats 0.1.0.
+#' Use `reportART()` with ARTool instead.
+#'
 #' To easily copy and paste the results to your manuscript, the following commands must be defined in Latex:
 #' \code{\\newcommand{\\F}[3]{$F({#1},{#2})={#3}$}}
 #' \code{\\newcommand{\\p}{\\textit{p=}}}
@@ -26,7 +29,13 @@
 #' reportNPAV(model, dv = "mental workload")
 
 reportNPAV <- function(model, dv = "Testdependentvariable", write_to_clipboard = FALSE) {
-  .Deprecated("ARTool")
+  .Deprecated(
+    "reportART",
+    msg = paste(
+      "reportNPAV() is deprecated and will be removed in colleyRstats 0.1.0 (2025-12-31).",
+      "Use reportART() with ARTool instead."
+    )
+  )
   not_empty(model)
   not_empty(dv)
 
@@ -72,7 +81,7 @@ reportNPAV <- function(model, dv = "Testdependentvariable", write_to_clipboard =
           }
 
 
-          if (str_detect(model$descriptions[i], "X")) {
+          if (stringr::str_detect(model$descriptions[i], "X")) {
             stringtowrite <- paste0("The NPAV found a significant interaction effect of \\", trimws(model$descriptions[i]), " on ", dv, " (\\F{", numeratordf, "}{", denominatordf, "}{", sprintf("%.2f", Fvalue), "}, ", pValue, ")")
           } else {
             stringtowrite <- paste0("The NPAV found a significant main effect of \\", trimws(model$descriptions[i]), " on ", dv, " (\\F{", numeratordf, "}{", denominatordf, "}{", sprintf("%.2f", Fvalue), "}, ", pValue, ")")
@@ -208,9 +217,6 @@ reportART <- function(model, dv = "Testdependentvariable", write_to_clipboard = 
           pValueNumeric <- model$`Pr(>F)`[i]
           pValue <- if (pValueNumeric < 0.001) paste0("\\pminor{0.001}") else paste0("\\p{", sprintf("%.3f", round(pValueNumeric, digits = 3)), "}")
 
-          # Write interaction or main effect depending on the presence of "X"
-          effect_type <- if (str_detect(model$descriptions[i], "X")) "interaction" else "main"
-          stringtowrite <- paste0("The ART found a significant ", effect_type, " effect of \\", trimws(model$descriptions[i]), " on ", dv, " (\\F{", numeratordf, "}{", denominatordf, "}{", sprintf("%.2f", Fvalue), "}, ", pValue, "). ")
           # Derive effect sizes via effectsize::F_to_eta2
           effect_size <- tryCatch(
             effectsize::F_to_eta2(
@@ -249,7 +255,7 @@ reportART <- function(model, dv = "Testdependentvariable", write_to_clipboard = 
           }
 
           # Write interaction or main effect depending on the presence of "X"
-          effect_type <- if (str_detect(model$descriptions[i], "X")) "interaction" else "main"
+          effect_type <- if (stringr::str_detect(model$descriptions[i], "X")) "interaction" else "main"
           stringtowrite <- paste0(
             "The ART found a significant ",
             effect_type,
@@ -361,10 +367,10 @@ reportNparLD <- function(model, dv = "Testdependentvariable", write_to_clipboard
       }
 
 
-      if (str_detect(model$descriptions[i], "X")) {
-        stringtowrite <- paste0("The NPVA found a significant interaction effect of \\", trimws(model$descriptions[i]), " on ", dv, " (\\F{", Fvalue, "}, \\df{", numeratordf, "}, ", pValue, ")")
+      if (stringr::str_detect(model$descriptions[i], "X")) {
+        stringtowrite <- paste0("The NPAV found a significant interaction effect of \\", trimws(model$descriptions[i]), " on ", dv, " (\\F{", Fvalue, "}, \\df{", numeratordf, "}, ", pValue, ")")
       } else {
-        stringtowrite <- paste0("The NPVA found a significant main effect of \\", trimws(model$descriptions[i]), " on ", dv, " (\\F{", Fvalue, "}, \\df{", numeratordf, "}, ", pValue, ")")
+        stringtowrite <- paste0("The NPAV found a significant main effect of \\", trimws(model$descriptions[i]), " on ", dv, " (\\F{", Fvalue, "}, \\df{", numeratordf, "}, ", pValue, ")")
       }
 
       effect_size_text <- ""
@@ -428,12 +434,15 @@ reportNparLD <- function(model, dv = "Testdependentvariable", write_to_clipboard
 #'
 #'   # Format the report output, showing only significant items, removing the
 #'   # standard note, and wrapping bullet items in an itemize environment.
-#'   latexify_report(
-#'     report::report(model),
-#'     only_sig = TRUE,
-#'     remove_std = TRUE,
-#'     itemize = TRUE
-#'   )
+#'   report_text <- try(report::report(model), silent = TRUE)
+#'   if (!inherits(report_text, "try-error")) {
+#'     latexify_report(
+#'       report_text,
+#'       only_sig = TRUE,
+#'       remove_std = TRUE,
+#'       itemize = TRUE
+#'     )
+#'   }
 #' }
 #' }
 latexify_report <- function(x,
@@ -544,10 +553,10 @@ reportMeanAndSD <- function(data, iv = "testiv", dv = "testdv") {
   not_empty(dv)
 
   test <- data |>
-    drop_na(!!sym(iv)) |>
-    drop_na(!!sym(dv)) |>
-    group_by(!!sym(iv)) |>
-    dplyr::summarise(across(!!sym(dv), list(mean = mean, sd = sd)))
+    tidyr::drop_na(!!rlang::sym(iv)) |>
+    tidyr::drop_na(!!rlang::sym(dv)) |>
+    dplyr::group_by(!!rlang::sym(iv)) |>
+    dplyr::summarise(dplyr::across(!!rlang::sym(dv), list(mean = mean, sd = sd)))
 
   for (i in 1:nrow(test)) {
     row <- test[i, ]
@@ -599,13 +608,16 @@ reportggstatsplot <- function(p, iv = "independent", dv = "Testdependentvariable
   # Create String
   if (stats$method %in% c("Kruskal-Wallis rank sum test", "Friedman rank sum test")) {
     resultString <- paste0("(\\chisq(", stats$df.error, ")=", statistic, ", ", pValue, ", r=", effectSize, ")")
-  } else if (stats$method %in% c("Paired t-test")) {
+  } else if (stats$method %in% c("Paired t-test", "Welch Two Sample t-test", "Student's t-test")) {
     resultString <- paste0("(t(", stats$df.error, ")=", statistic, ", ", pValue, ", r=", effectSize, ")")
-  } else if (stats$method %in% c("Wilcoxon signed rank test")) {
+  } else if (stats$method %in% c("Wilcoxon signed rank test", "Mann-Whitney U test")) {
     resultString <- paste0("(V=", statistic, ", ", pValue, ", r=", effectSize, ")")
-  } else {
-    # example: \F{7}{24.62}{1.01}, \p{0.45}
+  } else if (!is.null(stats$df) && !is.na(stats$df)) {
+    # ANOVA and similar tests with both df and df.error
     resultString <- paste0("(\\F{", stats$df, "}{", stats$df.error, "}{", statistic, "}, ", pValue, ", r=", effectSize, ")")
+  } else {
+    # Fallback for other methods
+    resultString <- paste0("(statistic=", statistic, ", ", pValue, ", effect size=", effectSize, ")")
   }
 
 
@@ -701,12 +713,12 @@ reportggstatsplotPostHoc <- function(data, p, iv = "testiv", dv = "testdv", labe
       secondLabel <- ifelse(is.null(label_mappings), secondCondition, label_mappings[[secondCondition]])
 
       valueOne <- data |>
-        filter(!!sym(iv) == firstCondition) |>
-        dplyr::summarise(across(!!sym(dv), list(mean = mean, sd = sd)))
+        dplyr::filter(!!rlang::sym(iv) == firstCondition) |>
+        dplyr::summarise(dplyr::across(!!rlang::sym(dv), list(mean = mean, sd = sd)))
 
       valueTwo <- data |>
-        filter(!!sym(iv) == secondCondition) |>
-        dplyr::summarise(across(!!sym(dv), list(mean = mean, sd = sd)))
+        dplyr::filter(!!rlang::sym(iv) == secondCondition) |>
+        dplyr::summarise(dplyr::across(!!rlang::sym(dv), list(mean = mean, sd = sd)))
 
       # Format statistics
       firstStatsStr <- paste0(" (\\m{", sprintf("%.2f", as.numeric(round(valueOne[1, 1], 2))), "}, \\sd{", sprintf("%.2f", as.numeric(round(valueOne[1, 2], 2))), "})")
@@ -791,7 +803,7 @@ reportDunnTest <- function(d, data, iv = "testiv", dv = "testdv") {
 
       # --- Calculate Effect Size ---
       data_subset <- data |>
-        dplyr::filter(!!sym(iv) %in% c(condA, condB))
+        dplyr::filter(!!rlang::sym(iv) %in% c(condA, condB))
 
       esStr <- ""
       tryCatch(
@@ -804,12 +816,12 @@ reportDunnTest <- function(d, data, iv = "testiv", dv = "testdv") {
 
       # --- Calculate Means/SDs ---
       statsA <- data |>
-        dplyr::filter(!!sym(iv) == condA) |>
-        summarise(m = mean(!!sym(dv), na.rm = TRUE), sd = sd(!!sym(dv), na.rm = TRUE))
+        dplyr::filter(!!rlang::sym(iv) == condA) |>
+        dplyr::summarise(m = mean(!!rlang::sym(dv), na.rm = TRUE), sd = sd(!!rlang::sym(dv), na.rm = TRUE))
 
       statsB <- data |>
-        dplyr::filter(!!sym(iv) == condB) |>
-        summarise(m = mean(!!sym(dv), na.rm = TRUE), sd = sd(!!sym(dv), na.rm = TRUE))
+        dplyr::filter(!!rlang::sym(iv) == condB) |>
+        dplyr::summarise(m = mean(!!rlang::sym(dv), na.rm = TRUE), sd = sd(!!rlang::sym(dv), na.rm = TRUE))
 
       strStatsA <- paste0("(\\m{", sprintf("%.2f", statsA$m), "}, \\sd{", sprintf("%.2f", statsA$sd), "})")
       strStatsB <- paste0("(\\m{", sprintf("%.2f", statsB$m), "}, \\sd{", sprintf("%.2f", statsB$sd), "})")
@@ -958,7 +970,7 @@ reportDunnTestTable <- function(d = NULL, data, iv = "testiv", dv = "testdv", or
     secondCondition <- trimws(strsplit(comparison, " - ", fixed = TRUE)[[1]][2])
 
     data_subset <- data |>
-      filter(!!sym(iv) %in% c(firstCondition, secondCondition))
+      dplyr::filter(!!rlang::sym(iv) %in% c(firstCondition, secondCondition))
 
     tryCatch(
       {

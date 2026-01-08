@@ -67,39 +67,39 @@ generateEffectPlot <- function(data,
       group = !!rlang::sym(fillColourGroup)
     ) +
     see::scale_colour_see() +
-    ylab(ytext) +
-    xlab(xtext) +
-    theme(
+    ggplot2::labs(y = ytext) +
+    ggplot2::labs(x = xtext) +
+    ggplot2::theme(
       legend.position.inside = legendPos,
-      legend.title = element_text(face = "bold", color = "black", size = 14)
+      legend.title = ggplot2::element_text(face = "bold", color = "black", size = 14)
     ) +
 
     # Points for each group
-    stat_summary(
+    ggplot2::stat_summary(
       fun = mean,
       geom = "point",
       size = 5
     ) +
 
     # Error bars
-    stat_summary(
+    ggplot2::stat_summary(
       fun.data = "mean_cl_boot",
       geom = "errorbar",
       width = .5,
-      position = position_dodge(width = 0.05),
+      position = ggplot2::position_dodge(width = 0.05),
       alpha = 0.5
     ) +
 
     # Ensure consistent order of legends
-    guides(
-      colour = guide_legend(order = 1),
-      fill   = guide_legend(order = 1),
-      shape  = guide_legend(order = 2)
+    ggplot2::guides(
+      colour = ggplot2::guide_legend(order = 1),
+      fill   = ggplot2::guide_legend(order = 1),
+      shape  = ggplot2::guide_legend(order = 2)
     )
 
   # Legend heading
   if (!is.null(legendHeading) && nzchar(legendHeading)) {
-    p <- p + labs(
+    p <- p + ggplot2::labs(
       color = legendHeading,
       fill  = legendHeading
     )
@@ -108,7 +108,7 @@ generateEffectPlot <- function(data,
   # Overwrite x-axis labels
   if (!is.null(xLabelsOverwrite)) {
     p <- p +
-      scale_x_discrete(
+      ggplot2::scale_x_discrete(
         name = xtext,
         labels = xLabelsOverwrite
       )
@@ -116,29 +116,29 @@ generateEffectPlot <- function(data,
 
   # Latex extension
   if (useLatexMarkup) {
-    p <- p + theme(
-      legend.text = element_text(
+    p <- p + ggplot2::theme(
+      legend.text = ggplot2::element_text(
         family = "sans",
         size = 17,
         color = "#000000"
       ),
-      axis.title.x = element_text(
+      axis.title.x = ggplot2::element_text(
         family = "sans",
         face = "bold",
         size = 18,
         color = "#000000"
       ),
-      axis.title.y = element_markdown( # Enables usage of e.g. "**Bold Text**" or unicode
+      axis.title.y = ggtext::element_markdown( # Enables usage of e.g. "**Bold Text**" or unicode
         family = "sans",
         size = 18,
         color = "#000000"
       ),
-      axis.text.x = element_text(
+      axis.text.x = ggplot2::element_text(
         family = "sans",
         size = 17,
         color = "#000000"
       ),
-      axis.text.y = element_text(
+      axis.text.y = ggplot2::element_text(
         family = "sans",
         size = 17,
         color = "#000000"
@@ -154,25 +154,25 @@ generateEffectPlot <- function(data,
 
   if (shownEffect == "main") {
     p <- p +
-      stat_summary(
+      ggplot2::stat_summary(
         fun = mean,
         geom = "line",
         linewidth = 2,
-        aes(group = 1),
+        ggplot2::aes(group = 1),
         show.legend = FALSE
       ) +
-      stat_summary(
+      ggplot2::stat_summary(
         fun = mean,
         geom = "point",
         size = 6,
-        aes(group = 1, shape = effectDescription),
+        ggplot2::aes(group = 1, shape = effectDescription),
         show.legend = effectLegend
       ) +
-      scale_shape_manual(
+      ggplot2::scale_shape_manual(
         name = "Main Effect",
         values = setNames(16, effectDescription) # 16 = shape code for solid dot
       ) +
-      stat_summary(
+      ggplot2::stat_summary(
         fun = mean,
         geom = "line",
         linetype = "dashed",
@@ -181,26 +181,26 @@ generateEffectPlot <- function(data,
       )
   } else if (shownEffect == "interaction") {
     p <- p +
-      stat_summary(
+      ggplot2::stat_summary(
         fun = mean,
         geom = "line",
         linetype = "dashed",
         linewidth = 1,
-        aes(group = 1),
+        ggplot2::aes(group = 1),
         show.legend = FALSE
       ) +
-      stat_summary(
+      ggplot2::stat_summary(
         fun = mean,
         geom = "point",
         size = 6,
-        aes(group = 1, shape = effectDescription),
+        ggplot2::aes(group = 1, shape = effectDescription),
         show.legend = effectLegend
       ) +
-      scale_shape_manual(
+      ggplot2::scale_shape_manual(
         name = "",
         values = setNames(16, effectDescription) # 16 = shape code for solid dot
       ) +
-      stat_summary(
+      ggplot2::stat_summary(
         fun = mean,
         geom = "line",
         linewidth = 2,
@@ -251,6 +251,10 @@ generateMoboPlot2 <- function(data, x = "Iteration", y, phaseCol = "Phase", fill
   not_empty(fillColourGroup)
   stopifnot(all(c(x, y, phaseCol) %in% names(data)))
 
+  if (!base::require("ggplot2", quietly = TRUE)) {
+    stop("Package 'ggplot2' is required for generateMoboPlot2().")
+  }
+
 
   # as default, just add the y variable in Title caps
   if (missing(ytext)) {
@@ -268,8 +272,8 @@ generateMoboPlot2 <- function(data, x = "Iteration", y, phaseCol = "Phase", fill
 
   p <- data |>
     ggplot2::ggplot(ggplot2::aes(x = !!x_sym, y = !!y_sym)) +
-    ggplot2::ylab(ytext) +
-    ggplot2::xlab("Iteration") +
+    ggplot2::labs(y = ytext) +
+    ggplot2::labs(x = "Iteration") +
     ggplot2::theme(legend.position.inside = legendPos) +
     ggplot2::stat_summary(fun = base::mean, geom = "point", size = 4.0, alpha = 0.9) +
     ggplot2::stat_summary(fun = base::mean, geom = "line", linewidth = 1, alpha = 0.3) +
@@ -326,7 +330,7 @@ generateMoboPlot2 <- function(data, x = "Iteration", y, phaseCol = "Phase", fill
 #' @param legendPos A numeric vector of length 2 specifying the position of the legend inside the plot. Default is `c(0.65, 0.85)`.
 #' @param numberSamplingSteps An integer specifying the number of initial sampling steps before the optimization phase begins. Default is 5.
 #' @param labelPosFormulaY A string specifying the vertical position of the polynomial equation label in the plot. Acceptable values are `"top"`, `"center"`, or `"bottom"`. Default is `"top"`.
-#' @param verticalLinePosY A numeric value of the y-coordinate where the "sampling" and "optimizatin" line should be drawn.
+#' @param verticalLinePosY A numeric value of the y-coordinate where the "sampling" and "optimization" line should be drawn.
 #'
 #' @return A `ggplot` object representing the multi-objective optimization plot, ready to be rendered.
 #' @export
@@ -356,6 +360,10 @@ generateMoboPlot <- function(data, x, y, fillColourGroup = "ConditionID", ytext,
   not_empty(y)
   not_empty(fillColourGroup)
 
+  if (!base::require("ggplot2", quietly = TRUE)) {
+    stop("Package 'ggplot2' is required for generateMoboPlot().")
+  }
+
   # as default, just add the y variable in Title caps
   if (missing(ytext)) {
     ytext <- stringr::str_to_title(y)
@@ -364,23 +372,62 @@ generateMoboPlot <- function(data, x, y, fillColourGroup = "ConditionID", ytext,
   maxIteration <- max(as.numeric(data[[x]]), na.rm = TRUE)
   numberOptimizations <- maxIteration - numberSamplingSteps
 
-  p <- data |> ggplot() +
-    aes(x = !!sym(x), y = !!sym(y), fill = !!sym(fillColourGroup), colour = !!sym(fillColourGroup), group = !!sym(fillColourGroup)) +
-    scale_fill_see() +
-    scale_color_see() +
-    ylab(ytext) +
-    theme(legend.position.inside = legendPos) +
-    xlab("Iteration") +
-    stat_summary(fun = mean, geom = "point", size = 4.0, alpha = 0.9) +
-    stat_summary(fun = mean, geom = "line", linewidth = 1, alpha = 0.3) +
-    stat_summary(fun.data = "mean_cl_boot", geom = "errorbar", width = .5, position = position_dodge(width = 0.1), alpha = 0.5) +
-    annotate("text", x = numberSamplingSteps / 2.0, y = verticalLinePosY - 0.2, label = "Sampling") +
-    geom_segment(aes(x = 0, y = verticalLinePosY, xend = numberSamplingSteps + 0.2, yend = verticalLinePosY), linetype = "dashed", color = "black") +
-    annotate("text", x = numberOptimizations / 2.0 + numberSamplingSteps, y = verticalLinePosY - 0.2, label = "Optimization") +
-    geom_segment(aes(x = numberSamplingSteps + 0.8, y = verticalLinePosY, xend = maxIteration, yend = verticalLinePosY), color = "black") +
-    stat_poly_eq(use_label(c("eq", "R2")), label.y = labelPosFormulaY) +
-    stat_poly_line(fullrange = FALSE, alpha = 0.1, linetype = "dashed", linewidth = 0.5) +
-    geom_vline(aes(xintercept = numberSamplingSteps + 0.5), linetype = "dashed", color = "black", alpha = 0.5)
+  p <- data |> ggplot2::ggplot() +
+    ggplot2::aes(
+      x = !!rlang::sym(x),
+      y = !!rlang::sym(y),
+      fill = !!rlang::sym(fillColourGroup),
+      colour = !!rlang::sym(fillColourGroup),
+      group = !!rlang::sym(fillColourGroup)
+    ) +
+    see::scale_fill_see() +
+    see::scale_color_see() +
+    ggplot2::labs(y = ytext) +
+    ggplot2::theme(legend.position.inside = legendPos) +
+    ggplot2::labs(x = "Iteration") +
+    ggplot2::stat_summary(fun = mean, geom = "point", size = 4.0, alpha = 0.9) +
+    ggplot2::stat_summary(fun = mean, geom = "line", linewidth = 1, alpha = 0.3) +
+    ggplot2::stat_summary(
+      fun.data = "mean_cl_boot",
+      geom = "errorbar",
+      width = .5,
+      position = ggplot2::position_dodge(width = 0.1),
+      alpha = 0.5
+    ) +
+    ggplot2::annotate("text", x = numberSamplingSteps / 2.0, y = verticalLinePosY - 0.2, label = "Sampling") +
+    ggplot2::geom_segment(
+      ggplot2::aes(
+        x = 0,
+        y = verticalLinePosY,
+        xend = numberSamplingSteps + 0.2,
+        yend = verticalLinePosY
+      ),
+      linetype = "dashed",
+      color = "black"
+    ) +
+    ggplot2::annotate(
+      "text",
+      x = numberOptimizations / 2.0 + numberSamplingSteps,
+      y = verticalLinePosY - 0.2,
+      label = "Optimization"
+    ) +
+    ggplot2::geom_segment(
+      ggplot2::aes(
+        x = numberSamplingSteps + 0.8,
+        y = verticalLinePosY,
+        xend = maxIteration,
+        yend = verticalLinePosY
+      ),
+      color = "black"
+    ) +
+    ggpmisc::stat_poly_eq(ggpmisc::use_label(c("eq", "R2")), label.y = labelPosFormulaY) +
+    ggpmisc::stat_poly_line(fullrange = FALSE, alpha = 0.1, linetype = "dashed", linewidth = 0.5) +
+    ggplot2::geom_vline(
+      ggplot2::aes(xintercept = numberSamplingSteps + 0.5),
+      linetype = "dashed",
+      color = "black",
+      alpha = 0.5
+    )
 
   return(p)
 }
@@ -438,12 +485,20 @@ ggwithinstatsWithPriorNormalityCheck <- function(data, x, y, ylab, xlabels = NUL
   plot <- ggstatsplot::ggwithinstats(
     data = data, x = !!x, y = !!y, type = type, centrality.type = "p", ylab = ylab, xlab = "", pairwise.comparisons = showPairwiseComp, var.equal = group_all_data_equal,
     centrality.point.args = list(size = 5, alpha = 0.5, color = "darkblue"), package = "pals", palette = "glasbey",
-    p.adjust.method = "holm", ggplot.component = list(theme(text = element_text(size = 16), plot.subtitle = element_text(size = 17, face = "bold"))), ggsignif.args = list(textsize = 4, tip_length = 0.01)
+    plot.type = plotType,
+    p.adjust.method = "holm",
+    ggplot.component = list(
+      ggplot2::theme(
+        text = ggplot2::element_text(size = 16),
+        plot.subtitle = ggplot2::element_text(size = 17, face = "bold")
+      )
+    ),
+    ggsignif.args = list(textsize = 4, tip_length = 0.01)
   )
 
   # Only apply custom xlabels if they are provided
   if (!is.null(xlabels) && length(xlabels) > 0) {
-    plot <- plot + scale_x_discrete(labels = xlabels)
+    plot <- plot + ggplot2::scale_x_discrete(labels = xlabels)
   }
 
   return(plot)
@@ -487,12 +542,11 @@ ggwithinstatsWithPriorNormalityCheck <- function(data, x, y, ylab, xlabels = NUL
 #'   showPairwiseComp = TRUE
 #' )
 #' }
-ggbetweenstatsWithPriorNormalityCheck <- function(data, x, y, ylab, xlabels, showPairwiseComp = TRUE, plotType = "boxviolin") {
+ggbetweenstatsWithPriorNormalityCheck <- function(data, x, y, ylab, xlabels = NULL, showPairwiseComp = TRUE, plotType = "boxviolin") {
   not_empty(data)
   not_empty(x)
   not_empty(y)
   not_empty(ylab)
-  not_empty(xlabels)
 
   is_normal <- check_normality_by_group(data, x, y)
   type <- ifelse(is_normal, "p", "np")
@@ -501,11 +555,24 @@ ggbetweenstatsWithPriorNormalityCheck <- function(data, x, y, ylab, xlabels, sho
   group_all_data_equal <- check_homogeneity_by_group(data, x, y)
 
   # if one group_all_data_equal then we use the var.equal = TRUE, see here: https://github.com/IndrajeetPatil/ggstatsplot/issues/880
-  ggstatsplot::ggbetweenstats(
+  plot <- ggstatsplot::ggbetweenstats(
     data = data, x = !!x, y = !!y, type = type, centrality.type = "p", ylab = ylab, xlab = "", pairwise.comparisons = showPairwiseComp, var.equal = group_all_data_equal,
     centrality.point.args = list(size = 5, alpha = 0.5, color = "darkblue"), package = "pals", palette = "glasbey", plot.type = plotType,
-    p.adjust.method = "holm", ggplot.component = list(theme(text = element_text(size = 16), plot.subtitle = element_text(size = 17, face = "bold"))), ggsignif.args = list(textsize = 4, tip_length = 0.01)
-  ) + scale_x_discrete(labels = xlabels)
+    p.adjust.method = "holm",
+    ggplot.component = list(
+      ggplot2::theme(
+        text = ggplot2::element_text(size = 16),
+        plot.subtitle = ggplot2::element_text(size = 17, face = "bold")
+      )
+    ),
+    ggsignif.args = list(textsize = 4, tip_length = 0.01)
+  )
+
+  if (!is.null(xlabels) && length(xlabels) > 0) {
+    plot <- plot + ggplot2::scale_x_discrete(labels = xlabels)
+  }
+
+  plot
 }
 
 
@@ -569,8 +636,15 @@ ggbetweenstatsWithPriorNormalityCheckAsterisk <- function(data, x, y, ylab, xlab
   p <- ggstatsplot::ggbetweenstats(
     data = data, x = !!x, y = !!y, type = type, centrality.type = "p", ylab = ylab, xlab = "", pairwise.display = "none", var.equal = group_all_data_equal,
     centrality.point.args = list(size = 5, alpha = 0.5, color = "darkblue"), package = "pals", palette = "glasbey", plot.type = plotType,
-    p.adjust.method = "holm", ggplot.component = list(theme(text = element_text(size = 16), plot.subtitle = element_text(size = 17, face = "bold"))), ggsignif.args = list(textsize = 4, tip_length = 0.01)
-  ) + scale_x_discrete(labels = xlabels)
+    p.adjust.method = "holm",
+    ggplot.component = list(
+      ggplot2::theme(
+        text = ggplot2::element_text(size = 16),
+        plot.subtitle = ggplot2::element_text(size = 17, face = "bold")
+      )
+    ),
+    ggsignif.args = list(textsize = 4, tip_length = 0.01)
+  ) + ggplot2::scale_x_discrete(labels = xlabels)
 
   # Only add asterisks if there are significant differences
   if (nrow(df) > 0) {
@@ -605,7 +679,7 @@ ggbetweenstatsWithPriorNormalityCheckAsterisk <- function(data, x, y, ylab, xlab
 }
 
 #' Check the data's distribution. If non-normal, take the non-parametric variant of *ggwithinstats*.
-#' x and y have to be in parentheses, e.g., "ConditionID". Add Astersiks instead of p-values.
+#' x and y have to be in parentheses, e.g., "ConditionID". Add Asterisks instead of p-values.
 #'
 #' @param data the data frame
 #' @param x the independent variable, most likely "ConditionID"
@@ -663,8 +737,15 @@ ggwithinstatsWithPriorNormalityCheckAsterisk <- function(data, x, y, ylab, xlabe
   p <- ggstatsplot::ggwithinstats(
     data = data, x = !!x, y = !!y, type = type, centrality.type = "p", ylab = ylab, xlab = "", pairwise.display = "none",
     centrality.point.args = list(size = 5, alpha = 0.5, color = "darkblue"), package = "pals", palette = "glasbey", plot.type = plotType,
-    p.adjust.method = "holm", ggplot.component = list(theme(text = element_text(size = 16), plot.subtitle = element_text(size = 17, face = "bold"))), ggsignif.args = list(textsize = 4, tip_length = 0.01)
-  ) + scale_x_discrete(labels = xlabels)
+    p.adjust.method = "holm",
+    ggplot.component = list(
+      ggplot2::theme(
+        text = ggplot2::element_text(size = 16),
+        plot.subtitle = ggplot2::element_text(size = 17, face = "bold")
+      )
+    ),
+    ggsignif.args = list(textsize = 4, tip_length = 0.01)
+  ) + ggplot2::scale_x_discrete(labels = xlabels)
 
   # Only add asterisks if there are significant differences
   if (nrow(df) > 0) {
