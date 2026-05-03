@@ -1,7 +1,7 @@
 Type: Package
 Package: colleyRstats
 Title: Functions to Streamline Statistical Analysis and Reporting
-Version: 0.0.3
+Version: 0.0.4
 Authors@R: 
     person("Mark", "Colley", , "mark.colley@yahoo.de", role = c("aut", "cre", "cph"), comment = c(ORCID = "0000-0001-5207-5029"))
 Description: Built upon popular R packages such as 'ggstatsplot' and 'ARTool', this collection offers a wide array of tools for simplifying reproducible analyses, generating high-quality visualizations, and producing 'APA'-compliant outputs. The primary goal of this package is to significantly reduce repetitive coding efforts, allowing you to focus on interpreting results. Whether you're dealing with ANOVA assumptions, reporting effect sizes, or creating publication-ready visualizations, this package makes these tasks easier.
@@ -18,17 +18,18 @@ Imports: ARTool (>= 0.11.2), car, clipr, conflicted, dplyr (>= 1.2.1),
         2.0.0), ggtext, purrr, readxl, report (>= 0.6.3), rlang,
         rstatix, see, stats, stringr, tidyr, utils, writexl, xtable
 Suggests: afex, BayesFactor, bayestestR, Cairo, dunn.test, DT, emmeans,
-        emoa, flexdashboard, Hmisc, moocore (>= 0.2.0), nparLD,
-        pkgload, psych (>= 2.6.3), reporttools, rstantools, scales,
-        sjPlot, stargazer, styler, tibble, testthat (>= 3.3.0)
+        emoa, flexdashboard, Hmisc, moocore (>= 0.2.0), nparLD, knitr,
+        pkgload, psych (>= 2.6.3), reporttools, rmarkdown, rstantools,
+        scales, sjPlot, stargazer, styler, tibble, testthat (>= 3.3.0)
 Config/testthat/edition: 3
 Config/Needs/check: anthonynorth/roxyglobals
 Config/roxyglobals/unique: TRUE
 Config/testthat/parallel: false
+VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2026-04-24 18:06:37 UTC; Mark
+Packaged: 2026-04-30 12:25:19 UTC; Mark
 Author: Mark Colley [aut, cre, cph] (ORCID:
     <https://orcid.org/0000-0001-5207-5029>)
 Maintainer: Mark Colley <mark.colley@yahoo.de>
 Repository: CRAN
-Date/Publication: 2026-04-24 18:20:12 UTC
+Date/Publication: 2026-05-03 15:00:02 UTC

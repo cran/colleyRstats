@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Getting started with colleyRstats</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Getting started with colleyRstats</h1>
+
+
+
+<p><code>colleyRstats</code> helps streamline a typical analysis
+workflow: configure a session, check assumptions, create a plot, and
+generate manuscript-ready text.</p>
+<div id="session-setup" class="section level2">
+<h2>Session setup</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>colleyRstats<span class="sc">::</span><span class="fu">colleyRstats_setup</span>(</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>  <span class="at">set_options =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>  <span class="at">set_theme =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>  <span class="at">set_conflicts =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>  <span class="at">print_citation =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>  <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>)</span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a><span class="co">#&gt; Registered S3 methods overwritten by &#39;ggpp&#39;:</span></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a><span class="co">#&gt;   method                  from   </span></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="co">#&gt;   heightDetails.titleGrob ggplot2</span></span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a><span class="co">#&gt;   widthDetails.titleGrob  ggplot2</span></span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a><span class="co">#&gt; Registered S3 method overwritten by &#39;lme4&#39;:</span></span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a><span class="co">#&gt;   method           from</span></span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a><span class="co">#&gt;   na.action.merMod car</span></span></code></pre></div>
+</div>
+<div id="example-data" class="section level2">
+<h2>Example data</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>main_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">Participant =</span> <span class="fu">factor</span>(<span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>, <span class="at">each =</span> <span class="dv">2</span>)),</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">ConditionID =</span> <span class="fu">factor</span>(<span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;Control&quot;</span>, <span class="st">&quot;Treatment&quot;</span>), <span class="at">times =</span> <span class="dv">20</span>)),</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="at">score =</span> <span class="fu">rnorm</span>(<span class="dv">40</span>, <span class="at">mean =</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="dv">50</span>, <span class="dv">55</span>), <span class="at">times =</span> <span class="dv">20</span>), <span class="at">sd =</span> <span class="dv">8</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="check-assumptions" class="section level2">
+<h2>Check assumptions</h2>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>colleyRstats<span class="sc">::</span><span class="fu">check_normality_by_group</span>(main_df, <span class="st">&quot;ConditionID&quot;</span>, <span class="st">&quot;score&quot;</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>colleyRstats<span class="sc">::</span><span class="fu">check_homogeneity_by_group</span>(main_df, <span class="st">&quot;ConditionID&quot;</span>, <span class="st">&quot;score&quot;</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+</div>
+<div id="create-a-plot" class="section level2">
+<h2>Create a plot</h2>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>colleyRstats<span class="sc">::</span><span class="fu">generateEffectPlot</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="at">data =</span> <span class="fu">transform</span>(main_df, <span class="at">Group =</span> ConditionID),</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">x =</span> <span class="st">&quot;ConditionID&quot;</span>,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">y =</span> <span class="st">&quot;score&quot;</span>,</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">fillColourGroup =</span> <span class="st">&quot;Group&quot;</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">ytext =</span> <span class="st">&quot;Score&quot;</span>,</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="at">xtext =</span> <span class="st">&quot;Condition&quot;</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>)</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt; `geom_line()`: Each group consists of only one observation.</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt; ℹ Do you need to adjust the group aesthetic?</span></span></code></pre></div>
+<p><img role="img" src="data:image/png;base64,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" /><!-- --></p>
+</div>
+<div id="produce-a-reporting-sentence" class="section level2">
+<h2>Produce a reporting sentence</h2>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>art_summary <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="at">Effect =</span> <span class="st">&quot;ConditionID&quot;</span>,</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">Df =</span> <span class="dv">1</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="st">`</span><span class="at">F value</span><span class="st">`</span> <span class="ot">=</span> <span class="fl">5.42</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="st">`</span><span class="at">Pr(&gt;F)</span><span class="st">`</span> <span class="ot">=</span> <span class="fl">0.027</span>,</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="at">Df.res =</span> <span class="dv">19</span>,</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  <span class="at">check.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>)</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>colleyRstats<span class="sc">::</span><span class="fu">reportART</span>(art_summary, <span class="at">dv =</span> <span class="st">&quot;score&quot;</span>)</span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt; The ART found a significant main effect of \ConditionID on score (\F{1}{19}{5.42}, \p{0.027}, $\eta_{p}^{2}$ = 0.22, 95\% CI: [0.01, 1.00]).</span></span></code></pre></div>
+</div>
+<div id="next-steps" class="section level2">
+<h2>Next steps</h2>
+<ul>
+<li>Browse the reference for reporting helpers such as
+<code>reportMeanAndSD()</code> and <code>reportDunnTest()</code>.</li>
+<li>Use <code>generateMoboPlot()</code> or
+<code>generateMoboPlot2()</code> for optimization studies.</li>
+<li>See the README for a broader catalog of available helpers.</li>
+</ul>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
