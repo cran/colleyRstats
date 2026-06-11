@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{add_pareto_emoa_column}
 \alias{add_pareto_emoa_column}
-\title{Add Pareto EMOA Column to a Data Frame}
+\title{Add \code{PARETO_EMOA} Column to a Data Frame}
 \usage{
 add_pareto_emoa_column(data, objectives)
 }
@@ -15,7 +15,7 @@ add_pareto_emoa_column(data, objectives)
 A data frame with the same columns as \code{data}, along with an additional column, \code{PARETO_EMOA}, which is \code{TRUE} for rows that are on the Pareto front and \code{FALSE} otherwise.
 }
 \description{
-This function calculates the Pareto front for a given set of objectives in a data frame and adds a new column, \code{PARETO_EMOA}, which indicates whether each row in the data frame belongs to the Pareto front.
+This function calculates the Pareto front using emoa for a given set of objectives in a data frame and adds a new column, \code{PARETO_EMOA}, which indicates whether each row in the data frame belongs to the Pareto front.
 }
 \examples{
 # Define objective columns

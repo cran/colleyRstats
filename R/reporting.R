@@ -1,9 +1,22 @@
+# Internal: write text to the clipboard when possible. clipr is a suggested
+# package and clipboards are unavailable on headless systems (e.g. CI), so a
+# missing clipboard degrades to a warning instead of an error.
+.write_clipboard <- function(text) {
+  if (!requireNamespace("clipr", quietly = TRUE) || !clipr::clipr_available()) {
+    warning("Clipboard is not available; skipping clipboard output.", call. = FALSE)
+    return(invisible(NULL))
+  }
+  clipr::write_clip(text)
+  invisible(NULL)
+}
+
+
 #' Generate the Latex-text based on the NPAV by Lüpsen (see \url{https://www.uni-koeln.de/~luepsen/R/}).
 #' Only significant main and interaction effects are reported.
 #' P-values are rounded for the third digit and partial eta squared values are provided when possible.
 #' Attention: the independent variables of the formula and the term specifying the participant must be factors (i.e., use as.factor()).
 #'
-#' Deprecated: `reportNPAV()` will be removed in colleyRstats 0.1.0.
+#' Deprecated: `reportNPAV()` will be removed in a future release.
 #' Use `reportART()` with ARTool instead.
 #'
 #' To easily copy and paste the results to your manuscript, the following commands must be defined in Latex:
@@ -14,8 +27,11 @@
 #' @param model the model of the np.anova
 #' @param dv the name of the dependent variable that should be reported
 #' @param write_to_clipboard whether to write to the clipboard
+#' @param sink_to optional path of a \code{.tex} file to write the sentences to,
+#'   so a manuscript can \code{\\input{}} them
 #'
-#' @return A message describing the statistical results.
+#' @return Invisibly returns the reported sentence(s) as a character vector;
+#'   the text is also emitted via \code{message()}.
 #' @export
 #'
 #' @examples
@@ -28,11 +44,11 @@
 #' rownames(model) <- c("Video", "gesture:eHMI", "Residuals")
 #' reportNPAV(model, dv = "mental workload")
 
-reportNPAV <- function(model, dv = "Testdependentvariable", write_to_clipboard = FALSE) {
+reportNPAV <- function(model, dv = "Testdependentvariable", write_to_clipboard = FALSE, sink_to = NULL) {
   .Deprecated(
     "reportART",
     msg = paste(
-      "reportNPAV() is deprecated and will be removed in colleyRstats 0.1.0 (2025-12-31).",
+      "reportNPAV() is deprecated and will be removed in a future release.",
       "Use reportART() with ARTool instead."
     )
   )
@@ -43,12 +59,15 @@ reportNPAV <- function(model, dv = "Testdependentvariable", write_to_clipboard =
     message(paste0("No column ``Pr(>F)'' was found. Most likely, you want to use the command reportNPAVChi."))
   } else {
     if (!any(model$`Pr(>F)` < 0.05, na.rm = TRUE)) {
+      no_effect_msg <- paste0("The NPAV found no significant effects on ", dv, ". ")
+      message(no_effect_msg)
       if (write_to_clipboard) {
-        message(paste0("The NPAV found no significant effects on ", dv, ". "))
-        write_clip(paste0("The NPAV found no significant effects on ", dv, ". "))
-      } else {
-        message(paste0("The NPAV found no significant effects on ", dv, ". "))
+        .write_clipboard(no_effect_msg)
       }
+      if (!is.null(sink_to)) {
+        .write_tex(no_effect_msg, sink_to)
+      }
+      return(invisible(no_effect_msg))
     } else {
       # there is a significant effect if any value is under 0.05
       # make the names accessible in a novel column
@@ -57,34 +76,34 @@ reportNPAV <- function(model, dv = "Testdependentvariable", write_to_clipboard =
       # no empty space to allow backslash later
       model$descriptions <- gsub(":", " X", model$descriptions)
 
+      # Collect every significant effect; the clipboard is written once at the
+      # end so multiple effects do not overwrite each other.
+      sentences <- character(0)
 
-      for (i in 1:length(model$`Pr(>F)`)) {
+      for (i in seq_along(model$`Pr(>F)`)) {
         # Residuals have NA therefore, we need this double-check
         if (!is.na(model$`Pr(>F)`[i]) && model$`Pr(>F)`[i] < 0.05) {
-          Fvalue <- round(model$`F value`[i], digits = 2) # round(model$`F value`[i], digits = 2)
+          Fvalue <- model$`F value`[i] # raw value; rounded only for display
           numeratordf <- model$Df[i]
 
-          # denominator is next with an NA
-          # potential for out-of-bounds
-          for (k in i:length(model$`Pr(>F)`)) {
+          # denominator is the next row whose p-value is NA (the residual row).
+          # Reset per iteration so we never reuse a previous effect's value or
+          # hit an undefined object when no residual row follows this term.
+          denominatordf <- NA_real_
+          for (k in seq.int(i, length(model$`Pr(>F)`))) {
             if (is.na(model$`Pr(>F)`[k])) {
               denominatordf <- model$Df[k]
               break
             }
           }
 
-          pValueNumeric <- model$`Pr(>F)`[i]
-          if (pValueNumeric < 0.001) {
-            pValue <- paste0("\\pminor{0.001}")
-          } else {
-            pValue <- paste0("\\p{", sprintf("%.3f", round(pValueNumeric, digits = 3)), "}")
-          }
+          pValue <- .fmt_p_macro(model$`Pr(>F)`[i])
 
 
           if (stringr::str_detect(model$descriptions[i], "X")) {
-            stringtowrite <- paste0("The NPAV found a significant interaction effect of \\", trimws(model$descriptions[i]), " on ", dv, " (\\F{", numeratordf, "}{", denominatordf, "}{", sprintf("%.2f", Fvalue), "}, ", pValue, ")")
+            stringtowrite <- paste0("The NPAV found a significant interaction effect of \\", trimws(model$descriptions[i]), " on ", dv, " (\\F{", numeratordf, "}{", denominatordf, "}{", .fmt_num(Fvalue), "}, ", pValue, ")")
           } else {
-            stringtowrite <- paste0("The NPAV found a significant main effect of \\", trimws(model$descriptions[i]), " on ", dv, " (\\F{", numeratordf, "}{", denominatordf, "}{", sprintf("%.2f", Fvalue), "}, ", pValue, ")")
+            stringtowrite <- paste0("The NPAV found a significant main effect of \\", trimws(model$descriptions[i]), " on ", dv, " (\\F{", numeratordf, "}{", denominatordf, "}{", .fmt_num(Fvalue), "}, ", pValue, ")")
           }
 
           effect_size_text <- ""
@@ -107,15 +126,15 @@ reportNPAV <- function(model, dv = "Testdependentvariable", write_to_clipboard =
               if (!is.null(eta_value) && !is.na(eta_value)) {
                 effect_size_text <- paste0(
                   ", $\\eta_{p}^{2}$=",
-                  sprintf("%.2f", eta_value)
+                  .fmt_bounded(eta_value)
                 )
                 if (!is.null(ci_low) && !is.null(ci_high) && !any(is.na(c(ci_low, ci_high)))) {
                   effect_size_text <- paste0(
                     effect_size_text,
                     " [",
-                    sprintf("%.2f", ci_low),
+                    .fmt_bounded(ci_low),
                     ", ",
-                    sprintf("%.2f", ci_high),
+                    .fmt_bounded(ci_high),
                     "]"
                   )
                 }
@@ -130,16 +149,21 @@ reportNPAV <- function(model, dv = "Testdependentvariable", write_to_clipboard =
           # Replace "X" with LaTeX code if preceded by a space
           stringtowrite <- gsub("(?<=\\s)X", "$\\\\times$ \\\\", stringtowrite, perl = TRUE)
 
-          if (write_to_clipboard) {
-            message(stringtowrite)
-            write_clip(stringtowrite)
-          } else {
-            message(stringtowrite)
-          }
+          message(stringtowrite)
+          sentences <- c(sentences, stringtowrite)
         }
       }
+
+      if (write_to_clipboard && length(sentences) > 0) {
+        .write_clipboard(paste(sentences, collapse = ""))
+      }
+      if (!is.null(sink_to) && length(sentences) > 0) {
+        .write_tex(sentences, sink_to)
+      }
+      return(invisible(sentences))
     }
   }
+  invisible(NULL)
 }
 
 
@@ -157,8 +181,11 @@ reportNPAV <- function(model, dv = "Testdependentvariable", write_to_clipboard =
 #' @param model the model of the art
 #' @param dv the name of the dependent variable that should be reported
 #' @param write_to_clipboard whether to write to the clipboard
+#' @param sink_to optional path of a \code{.tex} file to write the sentences to,
+#'   so a manuscript can \code{\\input{}} them
 #'
-#' @return A message describing the statistical results.
+#' @return Invisibly returns the reported sentence(s) as a character vector;
+#'   the text is also emitted via \code{message()}.
 #' @export
 #'
 #' @examples
@@ -184,7 +211,7 @@ reportNPAV <- function(model, dv = "Testdependentvariable", write_to_clipboard =
 #'   reportART(model_anova, dv = "mental demand")
 #' }
 #' }
-reportART <- function(model, dv = "Testdependentvariable", write_to_clipboard = FALSE) {
+reportART <- function(model, dv = "Testdependentvariable", write_to_clipboard = FALSE, sink_to = NULL) {
   # Check that the model and dependent variable are not empty
   not_empty(model)
   not_empty(dv)
@@ -195,27 +222,32 @@ reportART <- function(model, dv = "Testdependentvariable", write_to_clipboard = 
   } else {
     # Check if any p-values are significant
     if (!any(model$`Pr(>F)` < 0.05, na.rm = TRUE)) {
-      # Output a message depending on the write_to_clipboard option
       message_to_write <- paste0("The ART found no significant effects on ", dv, ". ")
+      message(message_to_write)
       if (write_to_clipboard) {
-        message(message_to_write)
-        write_clip(message_to_write)
-      } else {
-        message(message_to_write)
+        .write_clipboard(message_to_write)
       }
+      if (!is.null(sink_to)) {
+        .write_tex(message_to_write, sink_to)
+      }
+      return(invisible(message_to_write))
     } else {
       # Process significant effects
       model$descriptions <- model[, 1] # Make the names accessible
       model$descriptions <- gsub(":", " X", model$descriptions) # Replace colon with "X"
 
-      for (i in 1:length(model$`Pr(>F)`)) {
+      # Collect every significant effect; the clipboard is written once at the
+      # end so multiple effects do not overwrite each other.
+      sentences <- character(0)
+
+      for (i in seq_along(model$`Pr(>F)`)) {
         if (!is.na(model$`Pr(>F)`[i]) && model$`Pr(>F)`[i] < 0.05) {
-          # Extract and round values
-          Fvalue <- round(model$`F value`[i], digits = 2)
+          # Raw values; rounding happens only at display time so the effect
+          # size below is computed from the unrounded F statistic.
+          Fvalue <- model$`F value`[i]
           numeratordf <- model$Df[i]
           denominatordf <- model$Df.res[i]
-          pValueNumeric <- model$`Pr(>F)`[i]
-          pValue <- if (pValueNumeric < 0.001) paste0("\\pminor{0.001}") else paste0("\\p{", sprintf("%.3f", round(pValueNumeric, digits = 3)), "}")
+          pValue <- .fmt_p_macro(model$`Pr(>F)`[i])
 
           # Derive effect sizes via effectsize::F_to_eta2
           effect_size <- tryCatch(
@@ -238,16 +270,16 @@ reportART <- function(model, dv = "Testdependentvariable", write_to_clipboard = 
             if (!is.null(eta_value) && !is.na(eta_value)) {
               effect_size_text <- paste0(
                 ", $\\eta_{p}^{2}$ = ",
-                sprintf("%.2f", eta_value)
+                .fmt_bounded(eta_value)
               )
 
               if (!is.null(ci_low) && !is.null(ci_high) && !any(is.na(c(ci_low, ci_high)))) {
                 effect_size_text <- paste0(
                   effect_size_text,
                   ", 95\\% CI: [",
-                  sprintf("%.2f", ci_low),
+                  .fmt_bounded(ci_low),
                   ", ",
-                  sprintf("%.2f", ci_high),
+                  .fmt_bounded(ci_high),
                   "]"
                 )
               }
@@ -268,7 +300,7 @@ reportART <- function(model, dv = "Testdependentvariable", write_to_clipboard = 
             "}{",
             denominatordf,
             "}{",
-            sprintf("%.2f", Fvalue),
+            .fmt_num(Fvalue),
             "}, ",
             pValue
           )
@@ -282,17 +314,21 @@ reportART <- function(model, dv = "Testdependentvariable", write_to_clipboard = 
           # Replace "X" with LaTeX code if preceded by a space
           stringtowrite <- gsub("(?<=\\s)X", "$\\\\times$ \\\\", stringtowrite, perl = TRUE)
 
-          # Output the string depending on the write_to_clipboard option
-          if (write_to_clipboard) {
-            message(stringtowrite)
-            write_clip(stringtowrite)
-          } else {
-            message(stringtowrite)
-          }
+          message(stringtowrite)
+          sentences <- c(sentences, stringtowrite)
         }
       }
+
+      if (write_to_clipboard && length(sentences) > 0) {
+        .write_clipboard(paste(sentences, collapse = ""))
+      }
+      if (!is.null(sink_to) && length(sentences) > 0) {
+        .write_tex(sentences, sink_to)
+      }
+      return(invisible(sentences))
     }
   }
+  invisible(NULL)
 }
 
 
@@ -304,13 +340,17 @@ reportART <- function(model, dv = "Testdependentvariable", write_to_clipboard = 
 #'
 #' #' To easily copy and paste the results to your manuscript, the following commands must be defined in Latex:
 #' \code{\\newcommand{\\F}{\\textit{F=}}}
+#' \code{\\newcommand{\\df}{\\textit{df=}}}
 #' \code{\\newcommand{\\p}{\\textit{p=}}}
 #' \code{\\newcommand{\\pminor}{\\textit{p$<$}}}
 #' @param model the model
 #' @param dv the dependent variable
 #' @param write_to_clipboard whether to write to the clipboard
+#' @param sink_to optional path of a \code{.tex} file to write the sentences to,
+#'   so a manuscript can \code{\\input{}} them
 #'
-#' @return A message describing the statistical results.
+#' @return Invisibly returns the reported sentence(s) as a character vector;
+#'   the text is also emitted via \code{message()}.
 #' @export
 #'
 #' @examples \donttest{
@@ -335,7 +375,7 @@ reportART <- function(model, dv = "Testdependentvariable", write_to_clipboard = 
 #'   reportNparLD(model, dv = "TLX1")
 #'   }
 #' }
-reportNparLD <- function(model, dv = "Testdependentvariable", write_to_clipboard = FALSE) {
+reportNparLD <- function(model, dv = "Testdependentvariable", write_to_clipboard = FALSE, sink_to = NULL) {
   not_empty(model)
   not_empty(dv)
 
@@ -343,7 +383,15 @@ reportNparLD <- function(model, dv = "Testdependentvariable", write_to_clipboard
   model <- as.data.frame(model$ANOVA.test)
 
   if (!any(model$`p-value` < 0.05, na.rm = TRUE)) {
-    message(paste0("The NPAV found no significant effects on ", dv, ". "))
+    no_effect_msg <- paste0("The nparLD analysis found no significant effects on ", dv, ". ")
+    message(no_effect_msg)
+    if (write_to_clipboard) {
+      .write_clipboard(no_effect_msg)
+    }
+    if (!is.null(sink_to)) {
+      .write_tex(no_effect_msg, sink_to)
+    }
+    return(invisible(no_effect_msg))
   }
 
   # there is a significant effect if any value is under 0.05
@@ -352,25 +400,23 @@ reportNparLD <- function(model, dv = "Testdependentvariable", write_to_clipboard
 
   model$descriptions <- gsub(":", " X", model$descriptions)
 
+  # Collect every significant effect; the clipboard is written once at the
+  # end so multiple effects do not overwrite each other.
+  sentences <- character(0)
 
-  for (i in 1:length(model$`p-value`)) {
+  for (i in seq_along(model$`p-value`)) {
     # Residuals have NA therefore we need this double check
     if (!is.na(model$`p-value`[i]) && model$`p-value`[i] < 0.05) {
-      Fvalue <- sprintf("%.2f", round(model$`Statistic`[i], digits = 2)) # round(model$`Statistic`[i], digits = 2)
+      Fvalue <- .fmt_num(model$`Statistic`[i])
       numeratordf <- round(model$df[i], digits = 0)
 
-      pValueNumeric <- model$`p-value`[i]
-      if (pValueNumeric < 0.001) {
-        pValue <- paste0("\\pminor{0.001}")
-      } else {
-        pValue <- paste0("\\p{", sprintf("%.3f", round(pValueNumeric, digits = 3)), "}")
-      }
+      pValue <- .fmt_p_macro(model$`p-value`[i])
 
 
       if (stringr::str_detect(model$descriptions[i], "X")) {
-        stringtowrite <- paste0("The NPAV found a significant interaction effect of \\", trimws(model$descriptions[i]), " on ", dv, " (\\F{", Fvalue, "}, \\df{", numeratordf, "}, ", pValue, ")")
+        stringtowrite <- paste0("The nparLD analysis found a significant interaction effect of \\", trimws(model$descriptions[i]), " on ", dv, " (\\F{", Fvalue, "}, \\df{", numeratordf, "}, ", pValue, ")")
       } else {
-        stringtowrite <- paste0("The NPAV found a significant main effect of \\", trimws(model$descriptions[i]), " on ", dv, " (\\F{", Fvalue, "}, \\df{", numeratordf, "}, ", pValue, ")")
+        stringtowrite <- paste0("The nparLD analysis found a significant main effect of \\", trimws(model$descriptions[i]), " on ", dv, " (\\F{", Fvalue, "}, \\df{", numeratordf, "}, ", pValue, ")")
       }
 
       effect_size_text <- ""
@@ -379,7 +425,7 @@ reportNparLD <- function(model, dv = "Testdependentvariable", write_to_clipboard
         if (!is.null(rte_value) && !is.na(rte_value)) {
           effect_size_text <- paste0(
             ", $RTE=",
-            sprintf("%.2f", rte_value)
+            .fmt_bounded(rte_value)
           )
         }
       }
@@ -391,14 +437,18 @@ reportNparLD <- function(model, dv = "Testdependentvariable", write_to_clipboard
       # Replace "X" with LaTeX code if preceded by a space
       stringtowrite <- gsub("(?<=\\s)X", "$\\\\times$ \\\\", stringtowrite, perl = TRUE)
 
-      if (write_to_clipboard) {
-        message(stringtowrite)
-        write_clip(stringtowrite)
-      } else {
-        message(stringtowrite)
-      }
+      message(stringtowrite)
+      sentences <- c(sentences, stringtowrite)
     }
   }
+
+  if (write_to_clipboard && length(sentences) > 0) {
+    .write_clipboard(paste(sentences, collapse = ""))
+  }
+  if (!is.null(sink_to) && length(sentences) > 0) {
+    .write_tex(sentences, sink_to)
+  }
+  invisible(sentences)
 }
 
 
@@ -465,22 +515,28 @@ latexify_report <- function(x,
   #   1. Replace "R2" with "$R^2$"
   #   2. Replace "%" with "\%"
   #   3. Replace "~" with "$\\sim$"
+  # R2/Rhat use word boundaries so tokens such as "VAR2" are left alone.
   out <- x |>
-    gsub("R2", "$R^2$", x = _, fixed = TRUE) |>
+    gsub("\\bR2\\b", "$R^2$", x = _) |>
     gsub("%", "\\%", x = _, fixed = TRUE) |>
     gsub("~", "$\\sim$", x = _, fixed = TRUE) |>
-    gsub("Rhat", "$\\hat{R}$", x = _, fixed = TRUE)
+    gsub("\\bRhat\\b", "$\\\\hat{R}$", x = _)
 
   # Split into individual lines for processing
   lines <- strsplit(out, "\n")[[1]]
 
-  # Prepare to reconstruct the report line-by-line.
-  new_lines <- c()
-  bullet_block <- c() # temporary holder for bullet items
+  # Prepare to reconstruct the report line-by-line. Lists grow in amortised
+  # constant time when appended at the end, unlike repeated c() calls.
+  new_lines <- list()
+  bullet_block <- list() # temporary holder for bullet items
   in_bullet_block <- FALSE # flag to denote if we are collecting bullet items
 
   # Define a pattern to identify the standard note line
   std_pattern <- "Standardized parameters were obtained by fitting the model"
+
+  flush_bullets <- function(new_lines, bullet_block) {
+    c(new_lines, list("\\begin{itemize}"), bullet_block, list("\\end{itemize}"))
+  }
 
   for (line in lines) {
     # Optionally remove the final standard note line
@@ -497,33 +553,32 @@ latexify_report <- function(x,
 
       if (itemize) {
         # Replace initial dash with LaTeX \item and add to bullet_block
-        bullet_item <- sub("^\\s*-\\s+", "\\\\item ", line)
-        bullet_block <- c(bullet_block, bullet_item)
+        bullet_block[[length(bullet_block) + 1L]] <- sub("^\\s*-\\s+", "\\\\item ", line)
         in_bullet_block <- TRUE
       } else {
         # If not itemizing, simply remove the dash and add the line directly
-        new_lines <- c(new_lines, sub("^\\s*-\\s+", "", line))
+        new_lines[[length(new_lines) + 1L]] <- sub("^\\s*-\\s+", "", line)
       }
     } else {
       # If we reach a non-bullet line while inside a bullet block,
       # flush the bullet block into the new_lines (if itemize is TRUE)
       if (in_bullet_block && itemize) {
-        new_lines <- c(new_lines, "\\begin{itemize}", bullet_block, "\\end{itemize}")
+        new_lines <- flush_bullets(new_lines, bullet_block)
         # Reset bullet block and flag
-        bullet_block <- c()
+        bullet_block <- list()
         in_bullet_block <- FALSE
       }
       # Add the non-bullet line
-      new_lines <- c(new_lines, line)
+      new_lines[[length(new_lines) + 1L]] <- line
     }
   }
   # At the end, if a bullet block is pending, flush it now
   if (in_bullet_block && itemize) {
-    new_lines <- c(new_lines, "\\begin{itemize}", bullet_block, "\\end{itemize}")
+    new_lines <- flush_bullets(new_lines, bullet_block)
   }
 
   # Re-combine the resulting lines into a single string.
-  out <- paste(new_lines, collapse = "\n")
+  out <- paste(unlist(new_lines), collapse = "\n")
 
   # Optionally print to the console
   if (print_result) {
@@ -542,8 +597,11 @@ latexify_report <- function(x,
 #' @param data the data frame
 #' @param iv the independent variable
 #' @param dv the dependent variable
+#' @param sink_to optional path of a \code{.tex} file to write the lines to,
+#'   so a manuscript can \code{\\input{}} them
 #'
-#' @return Mean and SD values
+#' @return Invisibly returns the formatted lines as a character vector;
+#'   the text is also emitted via \code{message()}.
 #' @export
 #'
 #' @examples \donttest{
@@ -553,7 +611,7 @@ latexify_report <- function(x,
 #'
 #' reportMeanAndSD(example_data, iv = "Condition", dv = "TLX1")
 #' }
-reportMeanAndSD <- function(data, iv = "testiv", dv = "testdv") {
+reportMeanAndSD <- function(data, iv = "testiv", dv = "testdv", sink_to = NULL) {
   not_empty(data)
   not_empty(iv)
   not_empty(dv)
@@ -564,13 +622,18 @@ reportMeanAndSD <- function(data, iv = "testiv", dv = "testdv") {
     dplyr::group_by(!!rlang::sym(iv)) |>
     dplyr::summarise(dplyr::across(!!rlang::sym(dv), list(mean = mean, sd = sd)))
 
-  for (i in 1:nrow(test)) {
+  lines <- character(0)
+  for (i in seq_len(nrow(test))) {
     row <- test[i, ]
-    # do stuff with row
-    message(paste0("%", row[[1]], ": \\m{", sprintf("%.2f", round(row[[2]], digits = 2)), "}, \\sd{", sprintf("%.2f", round(row[[3]], digits = 2)), "}\n"))
+    line <- paste0("%", row[[1]], ": \\m{", .fmt_num(row[[2]]), "}, \\sd{", .fmt_num(row[[3]]), "}\n")
+    message(line)
+    lines <- c(lines, line)
   }
 
-  invisible(NULL)
+  if (!is.null(sink_to) && length(lines) > 0) {
+    .write_tex(lines, sink_to)
+  }
+  invisible(lines)
 }
 
 
@@ -580,8 +643,11 @@ reportMeanAndSD <- function(data, iv = "testiv", dv = "testdv") {
 #' @param iv the independent variable
 #' @param dv the dependent variable
 #' @param write_to_clipboard whether to write to the clipboard
+#' @param sink_to optional path of a \code{.tex} file to write the sentence to,
+#'   so a manuscript can \code{\\input{}} it
 #'
-#' @return A message describing the statistical results.
+#' @return Invisibly returns the reported sentence(s) as a character vector;
+#'   the text is also emitted via \code{message()}.
 #' @export
 #'
 #' @examples \donttest{
@@ -593,7 +659,7 @@ reportMeanAndSD <- function(data, iv = "testiv", dv = "testdv") {
 #'
 #' reportggstatsplot(plt, iv = "am", dv = "mpg")
 #' }
-reportggstatsplot <- function(p, iv = "independent", dv = "Testdependentvariable", write_to_clipboard = FALSE) {
+reportggstatsplot <- function(p, iv = "independent", dv = "Testdependentvariable", write_to_clipboard = FALSE, sink_to = NULL) {
   not_empty(p)
   not_empty(dv)
   not_empty(iv)
@@ -601,23 +667,22 @@ reportggstatsplot <- function(p, iv = "independent", dv = "Testdependentvariable
   stats <- ggstatsplot::extract_stats(p)$subtitle_data
   resultString <- ""
 
-  effectSize <- round(stats$estimate, digits = 2)
-  pValueNumeric <- round(stats$p.value, digits = 3)
-  if (pValueNumeric < 0.001) {
-    pValue <- paste0("\\pminor{0.001}")
-  } else {
-    pValue <- paste0("\\p{", sprintf("%.3f", pValueNumeric), "}")
-  }
+  effectSize <- .fmt_bounded(stats$estimate)
+  pValue <- .fmt_p_macro(stats$p.value)
+  statistic <- .fmt_num(stats$statistic)
 
-  statistic <- round(stats$statistic, digits = 2)
-
-  # Create String
+  # Create String. Method names come from statsExpressions, which uses the
+  # stats::*.test naming ("Wilcoxon rank sum test" for unpaired data, statistic
+  # W; "Wilcoxon signed rank test" for paired data, statistic V) - match on
+  # substrings so the "exact test" variants are covered as well.
   if (stats$method %in% c("Kruskal-Wallis rank sum test", "Friedman rank sum test")) {
     resultString <- paste0("(\\chisq(", stats$df.error, ")=", statistic, ", ", pValue, ", r=", effectSize, ")")
   } else if (stats$method %in% c("Paired t-test", "Welch Two Sample t-test", "Student's t-test")) {
     resultString <- paste0("(t(", stats$df.error, ")=", statistic, ", ", pValue, ", r=", effectSize, ")")
-  } else if (stats$method %in% c("Wilcoxon signed rank test", "Mann-Whitney U test")) {
+  } else if (grepl("signed rank", stats$method, fixed = TRUE)) {
     resultString <- paste0("(V=", statistic, ", ", pValue, ", r=", effectSize, ")")
+  } else if (grepl("rank sum test", stats$method, fixed = TRUE) || stats$method == "Mann-Whitney U test") {
+    resultString <- paste0("(W=", statistic, ", ", pValue, ", r=", effectSize, ")")
   } else if (!is.null(stats$df) && !is.na(stats$df)) {
     # ANOVA and similar tests with both df and df.error
     resultString <- paste0("(\\F{", stats$df, "}{", stats$df.error, "}{", statistic, "}, ", pValue, ", r=", effectSize, ")")
@@ -633,14 +698,15 @@ reportggstatsplot <- function(p, iv = "independent", dv = "Testdependentvariable
     msg <- paste0("A ", stats$method, " found a significant effect of \\", iv, " on ", dv, " ", resultString, ". ")
   }
 
+  message(msg)
   if (write_to_clipboard) {
-    message(msg)
-    clipr::write_clip(msg)
-  } else {
-    message(msg)
+    .write_clipboard(msg)
+  }
+  if (!is.null(sink_to)) {
+    .write_tex(msg, sink_to)
   }
 
-  invisible(NULL)
+  invisible(msg)
 }
 
 
@@ -668,8 +734,11 @@ reportggstatsplot <- function(p, iv = "independent", dv = "Testdependentvariable
 #' @param dv Character string. The column name of the dependent variable.
 #' @param label_mappings Optional named list or vector. Used to rename factor levels in the output text
 #' (e.g., `list("old_name" = "New Label")`).
+#' @param sink_to optional path of a \code{.tex} file to write the sentences to,
+#'   so a manuscript can \code{\\input{}} them
 #'
-#' @return No return value. The function prints LaTeX-formatted text to the console.
+#' @return Invisibly returns the reported sentence(s) as a character vector;
+#'   the text is also emitted via \code{message()}.
 #' @export
 #'
 #' @examples
@@ -689,7 +758,7 @@ reportggstatsplot <- function(p, iv = "independent", dv = "Testdependentvariable
 #'   label_mappings = list("0" = "Automatic", "1" = "Manual")
 #' )
 #' }
-reportggstatsplotPostHoc <- function(data, p, iv = "testiv", dv = "testdv", label_mappings = NULL) {
+reportggstatsplotPostHoc <- function(data, p, iv = "testiv", dv = "testdv", label_mappings = NULL, sink_to = NULL) {
   # Asserts to ensure non-empty inputs
   not_empty(data)
   not_empty(p)
@@ -701,44 +770,70 @@ reportggstatsplotPostHoc <- function(data, p, iv = "testiv", dv = "testdv", labe
 
   if (!any(stats$p.value < 0.05, na.rm = TRUE)) {
     message(paste0("A post-hoc test found no significant differences for ", dv, ". "))
-    return()
+    return(invisible(NULL))
   }
 
-  for (i in 1:length(stats$p.value)) {
+  # Map a raw factor level to its display label; falls back to the raw level
+  # when no mapping is supplied or the level is missing from the mapping
+  # (otherwise a NULL/NA entry would silently vanish inside paste0()).
+  map_label <- function(condition) {
+    # group levels may arrive as factors; [[ on a list indexed by a factor
+    # would use the underlying integer code instead of the label
+    condition <- as.character(condition)
+    if (is.null(label_mappings)) {
+      return(condition)
+    }
+    mapped <- if (is.list(label_mappings)) label_mappings[[condition]] else unname(label_mappings[condition])
+    if (is.null(mapped) || length(mapped) == 0 || is.na(mapped)) condition else mapped
+  }
+
+  sentences <- character(0)
+
+  for (i in seq_along(stats$p.value)) {
     if (!is.na(stats$p.value[i]) && stats$p.value[i] < 0.05) {
       # Format p-value
-      pValue <- if (stats$p.value[i] < 0.001) "\\padjminor{0.001}" else paste0("\\padj{", sprintf("%.3f", round(stats$p.value[i], 3)), "}")
+      pValue <- .fmt_p_macro(stats$p.value[i], macro = "padj", minor_macro = "padjminor")
 
       # Get conditions
       firstCondition <- stats$group1[i]
       secondCondition <- stats$group2[i]
 
-
-      # Apply label mappings if available
-      firstLabel <- ifelse(is.null(label_mappings), firstCondition, label_mappings[[firstCondition]])
-      secondLabel <- ifelse(is.null(label_mappings), secondCondition, label_mappings[[secondCondition]])
+      firstLabel <- map_label(firstCondition)
+      secondLabel <- map_label(secondCondition)
 
       valueOne <- data |>
         dplyr::filter(!!rlang::sym(iv) == firstCondition) |>
-        dplyr::summarise(dplyr::across(!!rlang::sym(dv), list(mean = mean, sd = sd)))
+        dplyr::summarise(dplyr::across(
+          !!rlang::sym(dv),
+          list(mean = \(v) mean(v, na.rm = TRUE), sd = \(v) stats::sd(v, na.rm = TRUE))
+        ))
 
       valueTwo <- data |>
         dplyr::filter(!!rlang::sym(iv) == secondCondition) |>
-        dplyr::summarise(dplyr::across(!!rlang::sym(dv), list(mean = mean, sd = sd)))
+        dplyr::summarise(dplyr::across(
+          !!rlang::sym(dv),
+          list(mean = \(v) mean(v, na.rm = TRUE), sd = \(v) stats::sd(v, na.rm = TRUE))
+        ))
 
       # Format statistics
-      firstStatsStr <- paste0(" (\\m{", sprintf("%.2f", as.numeric(round(valueOne[1, 1], 2))), "}, \\sd{", sprintf("%.2f", as.numeric(round(valueOne[1, 2], 2))), "})")
-      secondStatsStr <- paste0(" (\\m{", sprintf("%.2f", as.numeric(round(valueTwo[1, 1], 2))), "}, \\sd{", sprintf("%.2f", as.numeric(round(valueTwo[1, 2], 2))), "})")
+      firstStatsStr <- paste0(" (\\m{", .fmt_num(as.numeric(valueOne[1, 1])), "}, \\sd{", .fmt_num(as.numeric(valueOne[1, 2])), "})")
+      secondStatsStr <- paste0(" (\\m{", .fmt_num(as.numeric(valueTwo[1, 1])), "}, \\sd{", .fmt_num(as.numeric(valueTwo[1, 2])), "})")
 
       # Construct and print output string
-      if (as.numeric(round(valueOne[1, 1], 2)) > as.numeric(round(valueTwo[1, 1], 2))) {
-        message(paste0("A post-hoc test found that ", firstLabel, " was significantly higher", firstStatsStr, " in terms of \\", dv, " compared to ", secondLabel, secondStatsStr, "; ", pValue, "). "))
+      sentence <- if (as.numeric(valueOne[1, 1]) > as.numeric(valueTwo[1, 1])) {
+        paste0("A post-hoc test found that ", firstLabel, " was significantly higher", firstStatsStr, " in terms of \\", dv, " compared to ", secondLabel, secondStatsStr, "; ", pValue, "). ")
       } else {
-        message(paste0("A post-hoc test found that ", secondLabel, " was significantly higher", secondStatsStr, " in terms of \\", dv, " compared to ", firstLabel, firstStatsStr, "; ", pValue, "). "))
+        paste0("A post-hoc test found that ", secondLabel, " was significantly higher", secondStatsStr, " in terms of \\", dv, " compared to ", firstLabel, firstStatsStr, "; ", pValue, "). ")
       }
+      message(sentence)
+      sentences <- c(sentences, sentence)
     }
   }
-  invisible(NULL)
+
+  if (!is.null(sink_to) && length(sentences) > 0) {
+    .write_tex(sentences, sink_to)
+  }
+  invisible(sentences)
 }
 
 
@@ -751,8 +846,11 @@ reportggstatsplotPostHoc <- function(data, p, iv = "testiv", dv = "testdv", labe
 #' @param data the data frame
 #' @param iv independent variable
 #' @param dv dependent variable
+#' @param sink_to optional path of a \code{.tex} file to write the sentences to,
+#'   so a manuscript can \code{\\input{}} them
 #'
-#' @return A message describing the statistical results.
+#' @return Invisibly returns the reported sentence(s) as a character vector;
+#'   the text is also emitted via \code{message()}.
 #' @export
 #'
 #' @examples
@@ -775,7 +873,7 @@ reportggstatsplotPostHoc <- function(data, p, iv = "testiv", dv = "testdv", labe
 #'   )
 #' }
 #' }
-reportDunnTest <- function(d, data, iv = "testiv", dv = "testdv") {
+reportDunnTest <- function(d, data, iv = "testiv", dv = "testdv", sink_to = NULL) {
   not_empty(data)
   not_empty(d)
   not_empty(iv)
@@ -784,22 +882,21 @@ reportDunnTest <- function(d, data, iv = "testiv", dv = "testdv") {
   # Check for significance globally first
   # Note: d$res$P.adj can contain NAs, so we remove them for the check
   if (!any(d$res$P.adj < 0.05, na.rm = TRUE)) {
-    message(paste0("A post-hoc test found no significant differences for ", dv, ". "))
-    return(invisible(NULL))
+    no_diff_msg <- paste0("A post-hoc test found no significant differences for ", dv, ". ")
+    message(no_diff_msg)
+    if (!is.null(sink_to)) {
+      .write_tex(no_diff_msg, sink_to)
+    }
+    return(invisible(no_diff_msg))
   }
 
   # 1. Collect all significant findings into a data frame/list
   findings <- list()
 
-  for (i in 1:length(d$res$P.adj)) {
+  for (i in seq_along(d$res$P.adj)) {
     if (!is.na(d$res$P.adj[i]) && d$res$P.adj[i] < 0.05) {
       # --- P-Value Formatting ---
-      pValueNumeric <- d$res$P.adj[i]
-      if (pValueNumeric < 0.001) {
-        pValueStr <- "\\padjminor{0.001}"
-      } else {
-        pValueStr <- paste0("\\padj{", sprintf("%.3f", round(pValueNumeric, digits = 3)), "}")
-      }
+      pValueStr <- .fmt_p_macro(d$res$P.adj[i], macro = "padj", minor_macro = "padjminor")
 
       # --- Split Conditions ---
       # Assuming standard Dunn output "A - B"
@@ -809,15 +906,22 @@ reportDunnTest <- function(d, data, iv = "testiv", dv = "testdv") {
 
       # --- Calculate Effect Size ---
       data_subset <- data |>
-        dplyr::filter(!!rlang::sym(iv) %in% c(condA, condB))
+        dplyr::filter(!!rlang::sym(iv) %in% c(condA, condB)) |>
+        droplevels()
 
       esStr <- ""
       tryCatch(
         {
           es <- effectsize::rank_biserial(as.formula(paste(dv, "~", iv)), data = data_subset)
-          esStr <- paste0(", \\rankbiserial{", sprintf("%.2f", abs(es$r_rank_biserial)), "}")
+          esStr <- paste0(", \\rankbiserial{", .fmt_bounded(abs(es$r_rank_biserial)), "}")
         },
-        error = function(e) {}
+        error = function(e) {
+          warning(
+            "Effect size could not be computed for '", d$res$Comparison[i], "': ",
+            conditionMessage(e),
+            call. = FALSE
+          )
+        }
       )
 
       # --- Calculate Means/SDs ---
@@ -829,8 +933,8 @@ reportDunnTest <- function(d, data, iv = "testiv", dv = "testdv") {
         dplyr::filter(!!rlang::sym(iv) == condB) |>
         dplyr::summarise(m = mean(!!rlang::sym(dv), na.rm = TRUE), sd = sd(!!rlang::sym(dv), na.rm = TRUE))
 
-      strStatsA <- paste0("(\\m{", sprintf("%.2f", statsA$m), "}, \\sd{", sprintf("%.2f", statsA$sd), "})")
-      strStatsB <- paste0("(\\m{", sprintf("%.2f", statsB$m), "}, \\sd{", sprintf("%.2f", statsB$sd), "})")
+      strStatsA <- paste0("(\\m{", .fmt_num(statsA$m), "}, \\sd{", .fmt_num(statsA$sd), "})")
+      strStatsB <- paste0("(\\m{", .fmt_num(statsB$m), "}, \\sd{", .fmt_num(statsB$sd), "})")
 
       # --- Determine Direction (Winner vs Loser) ---
       if (statsA$m >= statsB$m) {
@@ -839,16 +943,16 @@ reportDunnTest <- function(d, data, iv = "testiv", dv = "testdv") {
         loser <- trimws(condB)
         # The stats/p/es string for the "loser" part of the sentence
         loserString <- paste0(
-          trimws(condB), " (\\m{", sprintf("%.2f", statsB$m),
-          "}, \\sd{", sprintf("%.2f", statsB$sd), "}; ", pValueStr, esStr, ")"
+          trimws(condB), " (\\m{", .fmt_num(statsB$m),
+          "}, \\sd{", .fmt_num(statsB$sd), "}; ", pValueStr, esStr, ")"
         )
       } else {
         winner <- trimws(condB)
         winnerStats <- strStatsB
         loser <- trimws(condA)
         loserString <- paste0(
-          trimws(condA), " (\\m{", sprintf("%.2f", statsA$m),
-          "}, \\sd{", sprintf("%.2f", statsA$sd), "}; ", pValueStr, esStr, ")"
+          trimws(condA), " (\\m{", .fmt_num(statsA$m),
+          "}, \\sd{", .fmt_num(statsA$sd), "}; ", pValueStr, esStr, ")"
         )
       }
 
@@ -862,6 +966,7 @@ reportDunnTest <- function(d, data, iv = "testiv", dv = "testdv") {
   }
 
   # 2. Group findings by Winner and construct sentences
+  sentences <- character(0)
   if (length(findings) > 0) {
     # Convert list to dataframe for easier grouping
     df_res <- do.call(rbind, lapply(findings, as.data.frame, stringsAsFactors = FALSE))
@@ -896,9 +1001,14 @@ reportDunnTest <- function(d, data, iv = "testiv", dv = "testdv") {
       )
 
       message(final_str)
+      sentences <- c(sentences, final_str)
     }
   }
-  invisible(NULL)
+
+  if (!is.null(sink_to) && length(sentences) > 0) {
+    .write_tex(sentences, sink_to)
+  }
+  invisible(sentences)
 }
 
 
@@ -914,9 +1024,12 @@ reportDunnTest <- function(d, data, iv = "testiv", dv = "testdv") {
 #' @param orderByP whether to order by the p value
 #' @param numberDigitsForPValue the number of digits to show
 #' @param latexSize which size for the text
-#' @param orderText whether to order the text
+#' @param orderText whether to order the comparisons alphabetically; ignored when `orderByP = TRUE`
+#' @param sink_to optional path of a \code{.tex} file to write the table to,
+#'   so a manuscript can \code{\\input{}} it
 #'
-#' @return A message describing the statistical results in a table.
+#' @return Invisibly returns the rendered LaTeX table as a string (or
+#'   \code{NULL} when xtable is unavailable); the table is also printed.
 #' @export
 #'
 #' @examples
@@ -939,13 +1052,16 @@ reportDunnTest <- function(d, data, iv = "testiv", dv = "testdv") {
 #'   )
 #' }
 #' }
-reportDunnTestTable <- function(d = NULL, data, iv = "testiv", dv = "testdv", orderByP = FALSE, numberDigitsForPValue = 4, latexSize = "small", orderText = TRUE) {
+reportDunnTestTable <- function(d = NULL, data, iv = "testiv", dv = "testdv", orderByP = FALSE, numberDigitsForPValue = 4, latexSize = "small", orderText = TRUE, sink_to = NULL) {
   not_empty(data)
   not_empty(iv)
   not_empty(dv)
 
   # If d is not provided, calculate it
   if (is.null(d)) {
+    if (!requireNamespace("FSA", quietly = TRUE)) {
+      stop("Package 'FSA' is required to compute the Dunn test when `d` is not supplied. Please install it or pass `d` directly.")
+    }
     d <- FSA::dunnTest(as.formula(paste(dv, "~", iv)), data = data, method = "holm")
   }
 
@@ -964,19 +1080,25 @@ reportDunnTestTable <- function(d = NULL, data, iv = "testiv", dv = "testdv", or
 
   # Check if there are any significant results
   if (nrow(table) == 0) {
-    message(paste0("A post-hoc test found no significant differences for ", dv, ". "))
-    return(invisible(NULL))
+    no_diff_msg <- paste0("A post-hoc test found no significant differences for ", dv, ". ")
+    message(no_diff_msg)
+    if (!is.null(sink_to)) {
+      .write_tex(no_diff_msg, sink_to)
+    }
+    return(invisible(no_diff_msg))
   }
 
   # Calculate effect sizes for all comparisons (only for significant ones)
   effectSizes <- numeric(nrow(table))
-  for (i in 1:nrow(table)) {
+  for (i in seq_len(nrow(table))) {
     comparison <- as.character(table[i, "Comparison"])
-    firstCondition <- trimws(strsplit(comparison, " - ", fixed = TRUE)[[1]][1])
-    secondCondition <- trimws(strsplit(comparison, " - ", fixed = TRUE)[[1]][2])
+    parts <- strsplit(comparison, " - ", fixed = TRUE)[[1]]
+    firstCondition <- trimws(parts[1])
+    secondCondition <- trimws(parts[2])
 
     data_subset <- data |>
-      dplyr::filter(!!rlang::sym(iv) %in% c(firstCondition, secondCondition))
+      dplyr::filter(!!rlang::sym(iv) %in% c(firstCondition, secondCondition)) |>
+      droplevels()
 
     tryCatch(
       {
@@ -986,7 +1108,14 @@ reportDunnTestTable <- function(d = NULL, data, iv = "testiv", dv = "testdv", or
         effectSizes[i] <- abs(es$r_rank_biserial)
       },
       error = function(e) {
-        effectSizes[i] <- NA
+        # Super-assign so the failure is recorded in the enclosing vector;
+        # a plain `<-` here would only mutate a discarded local copy.
+        effectSizes[i] <<- NA
+        warning(
+          "Effect size could not be computed for '", comparison, "': ",
+          conditionMessage(e),
+          call. = FALSE
+        )
       }
     )
   }
@@ -994,11 +1123,11 @@ reportDunnTestTable <- function(d = NULL, data, iv = "testiv", dv = "testdv", or
   # Add effect size column
   table$r <- effectSizes
 
+  # orderByP takes precedence: previously the alphabetical sort below ran
+  # second and silently undid an explicitly requested p-value ordering.
   if (orderByP) {
     table <- table[order(table$`p-adjusted`), ]
-  }
-
-  if (orderText) {
+  } else if (orderText) {
     table <- table[order(table$Comparison), ]
   }
 
@@ -1022,15 +1151,432 @@ reportDunnTestTable <- function(d = NULL, data, iv = "testiv", dv = "testdv", or
       label = paste0("tab:posthoc-", iv, "-", dv)
     )
 
-    print(xtable_obj, type = "latex", size = latexSize, caption.placement = "top", include.rownames = FALSE)
-  } else {
-    message(paste0(
-      "Post-hoc comparisons for independent variable \\", iv,
-      " and dependent variable \\", dv,
-      ". Positive Z-values mean that the first-named level is sig. higher than the second-named. For negative Z-values, the opposite is true. Effect size reported as rank-biserial correlation (r).\n"
-    ))
-    print(table)
+    latex_str <- print(xtable_obj, type = "latex", size = latexSize, caption.placement = "top", include.rownames = FALSE, print.results = FALSE)
+    cat(latex_str)
+    if (!is.null(sink_to)) {
+      .write_tex(latex_str, sink_to)
+    }
+    return(invisible(latex_str))
   }
+
+  message(paste0(
+    "Post-hoc comparisons for independent variable \\", iv,
+    " and dependent variable \\", dv,
+    ". Positive Z-values mean that the first-named level is sig. higher than the second-named. For negative Z-values, the opposite is true. Effect size reported as rank-biserial correlation (r).\n"
+  ))
+  print(table)
+
+  invisible(NULL)
+}
+
+
+# Internal: coerce an art.con() result (or its summary) into a tidy data frame
+# with normalised column names. `art.con()` returns an emmeans `emmGrid`; its
+# summary carries `contrast`, `estimate`, `SE`, `df`, `t.ratio`/`z.ratio` and
+# `p.value`. Also accepts an already-summarised data frame so callers may pass
+# either `ac` or `summary(ac)`.
+.art_con_to_df <- function(ac) {
+  if (inherits(ac, "emmGrid")) {
+    tbl <- as.data.frame(summary(ac))
+  } else {
+    tbl <- as.data.frame(ac)
+  }
+
+  # Contrast label column
+  if (!"contrast" %in% names(tbl)) {
+    cand <- names(tbl)[vapply(tbl, function(x) is.character(x) || is.factor(x), logical(1))]
+    if (length(cand) == 0) {
+      stop("Could not find a contrast/label column in the art.con() object.")
+    }
+    names(tbl)[names(tbl) == cand[1]] <- "contrast"
+  }
+  tbl$contrast <- as.character(tbl$contrast)
+
+  # p-value column (already adjusted by art.con()'s `adjust` argument)
+  if (!"p.value" %in% names(tbl)) {
+    pcol <- grep("^p\\.value$|p\\.val|Pr\\(>", names(tbl), ignore.case = TRUE, value = TRUE)
+    if (length(pcol) == 0) {
+      stop("Could not find a p-value column in the art.con() object.")
+    }
+    names(tbl)[names(tbl) == pcol[1]] <- "p.value"
+  }
+
+  # Test statistic column: prefer t.ratio, fall back to z.ratio
+  if (!"statistic" %in% names(tbl)) {
+    scol <- grep("^t\\.ratio$|^z\\.ratio$", names(tbl), value = TRUE)
+    tbl$statistic <- if (length(scol) > 0) tbl[[scol[1]]] else NA_real_
+  }
+  if (!"df" %in% names(tbl)) {
+    tbl$df <- NA_real_
+  }
+
+  tbl
+}
+
+
+# Internal: rank-biserial correlation for one pair of conditions, computed from
+# the raw data. For unpaired data the formula interface is used. For paired
+# (within-subjects) data we aggregate to one value per subject x condition
+# (mean of any replicate trials), align the two conditions by `id`, and use the
+# two-vector interface (the formula interface of effectsize does not support
+# `paired = TRUE`).
+.art_con_effect_size <- function(data, iv, dv, condA, condB, paired = FALSE, id = NULL) {
+  data_subset <- data |>
+    dplyr::filter(!!rlang::sym(iv) %in% c(condA, condB)) |>
+    droplevels()
+
+  if (!paired) {
+    es <- effectsize::rank_biserial(
+      stats::as.formula(paste(dv, "~", iv)),
+      data = data_subset
+    )
+    return(abs(es$r_rank_biserial))
+  }
+
+  if (is.null(id) || !id %in% names(data)) {
+    stop("`paired = TRUE` requires `id` to name the subject/pairing column.")
+  }
+
+  wide <- data_subset |>
+    dplyr::group_by(!!rlang::sym(id), !!rlang::sym(iv)) |>
+    dplyr::summarise(.value = mean(!!rlang::sym(dv), na.rm = TRUE), .groups = "drop") |>
+    tidyr::pivot_wider(names_from = !!rlang::sym(iv), values_from = ".value")
+
+  x <- wide[[condA]]
+  y <- wide[[condB]]
+  keep <- stats::complete.cases(x, y)
+  es <- effectsize::rank_biserial(x[keep], y[keep], paired = TRUE)
+  abs(es$r_rank_biserial)
+}
+
+
+#' Report significant ART contrasts (art.con) as LaTeX text
+#'
+#' Companion to [reportDunnTest()] for aligned-rank-transform (ART) models. It
+#' extracts the significant pairwise comparisons produced by [ARTool::art.con()]
+#' (an \pkg{emmeans} contrast grid), computes the mean and standard deviation of
+#' the groups involved from the raw data, and prints LaTeX-formatted sentences.
+#'
+#' The p-values are taken as-is from the contrast object, i.e. they are already
+#' adjusted by whatever `adjust` was passed to `art.con()` (e.g. `"holm"`). The
+#' effect size is the rank-biserial correlation computed from the raw data. ART
+#' is most often used for within-subjects designs; pass `paired = TRUE` together
+#' with `id` (the subject column) to obtain the paired rank-biserial effect size.
+#'
+#' Attention: `ac` must be a pairwise contrast over a single factor `iv`
+#' (e.g. `art.con(model, ~ interaction_mode, adjust = "holm")`).
+#'
+#' Required commands in LaTeX:
+#' \code{\\newcommand{\\padjminor}{\\textit{p$_{adj}<$}}}
+#' \code{\\newcommand{\\padj}{\\textit{p$_{adj}$=}}}
+#' \code{\\newcommand{\\rankbiserial}[1]{$r_{rb} = #1$}}
+#'
+#' @param ac the contrast object returned by [ARTool::art.con()] (or its `summary()`)
+#' @param data the raw data frame used to fit the model
+#' @param iv independent variable (the contrasted factor)
+#' @param dv dependent variable
+#' @param paired whether to compute the rank-biserial effect size for paired
+#'   (within-subjects) data. Defaults to `FALSE`. When `TRUE`, `id` is required.
+#' @param id the subject/pairing column, used only when `paired = TRUE`. Replicate
+#'   trials per subject and condition are averaged before pairing.
+#' @param sink_to optional path of a \code{.tex} file to write the sentences to,
+#'   so a manuscript can \code{\\input{}} them
+#'
+#' @return Invisibly returns the reported sentence(s) as a character vector;
+#'   the text is also emitted via \code{message()}.
+#' @export
+#'
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ARTool", quietly = TRUE) &&
+#'   requireNamespace("emmeans", quietly = TRUE)) {
+#'   set.seed(123)
+#'   n <- 20
+#'   df <- data.frame(
+#'     UserID = factor(rep(seq_len(n), times = 3)),
+#'     mode   = factor(rep(c("Hand", "Eye", "Both"), each = n)),
+#'     prime  = factor(rep(rep(c("A", "B"), each = n / 2), times = 3))
+#'   )
+#'   df$score <- as.numeric(df$mode) * 2 + stats::rnorm(nrow(df))
+#'
+#'   m  <- ARTool::art(score ~ mode * prime + Error(UserID / mode), data = df)
+#'   ac <- ARTool::art.con(m, ~ mode, adjust = "holm")
+#'   reportArtCon(ac, data = df, iv = "mode", dv = "score", paired = TRUE, id = "UserID")
+#' }
+#' }
+reportArtCon <- function(ac, data, iv = "testiv", dv = "testdv", paired = FALSE, id = NULL, sink_to = NULL) {
+  not_empty(ac)
+  not_empty(data)
+  not_empty(iv)
+  not_empty(dv)
+
+  tbl <- .art_con_to_df(ac)
+
+  # Check for significance globally first
+  if (!any(tbl$p.value < 0.05, na.rm = TRUE)) {
+    no_diff_msg <- paste0("A post-hoc test found no significant differences for ", dv, ". ")
+    message(no_diff_msg)
+    if (!is.null(sink_to)) {
+      .write_tex(no_diff_msg, sink_to)
+    }
+    return(invisible(no_diff_msg))
+  }
+
+  # 1. Collect all significant findings into a list
+  findings <- list()
+
+  for (i in seq_along(tbl$p.value)) {
+    if (!is.na(tbl$p.value[i]) && tbl$p.value[i] < 0.05) {
+      # --- P-Value Formatting ---
+      pValueStr <- .fmt_p_macro(tbl$p.value[i], macro = "padj", minor_macro = "padjminor")
+
+      # --- Split Conditions ---
+      # emmeans pairwise contrasts are labelled "A - B"
+      parts <- strsplit(tbl$contrast[i], " - ", fixed = TRUE)[[1]]
+      condA <- trimws(parts[1])
+      condB <- trimws(parts[2])
+
+      # --- Calculate Effect Size (rank-biserial from the raw data) ---
+      esStr <- ""
+      tryCatch(
+        {
+          rrb <- .art_con_effect_size(data, iv, dv, condA, condB, paired = paired, id = id)
+          esStr <- paste0(", \\rankbiserial{", .fmt_bounded(rrb), "}")
+        },
+        error = function(e) {
+          warning(
+            "Effect size could not be computed for '", tbl$contrast[i], "': ",
+            conditionMessage(e),
+            call. = FALSE
+          )
+        }
+      )
+
+      # --- Calculate Means/SDs ---
+      statsA <- data |>
+        dplyr::filter(!!rlang::sym(iv) == condA) |>
+        dplyr::summarise(m = mean(!!rlang::sym(dv), na.rm = TRUE), sd = stats::sd(!!rlang::sym(dv), na.rm = TRUE))
+
+      statsB <- data |>
+        dplyr::filter(!!rlang::sym(iv) == condB) |>
+        dplyr::summarise(m = mean(!!rlang::sym(dv), na.rm = TRUE), sd = stats::sd(!!rlang::sym(dv), na.rm = TRUE))
+
+      strStatsA <- paste0("(\\m{", .fmt_num(statsA$m), "}, \\sd{", .fmt_num(statsA$sd), "})")
+      strStatsB <- paste0("(\\m{", .fmt_num(statsB$m), "}, \\sd{", .fmt_num(statsB$sd), "})")
+
+      # --- Determine Direction (Winner vs Loser) ---
+      if (statsA$m >= statsB$m) {
+        winner <- condA
+        winnerStats <- strStatsA
+        loserString <- paste0(
+          condB, " (\\m{", .fmt_num(statsB$m),
+          "}, \\sd{", .fmt_num(statsB$sd), "}; ", pValueStr, esStr, ")"
+        )
+      } else {
+        winner <- condB
+        winnerStats <- strStatsB
+        loserString <- paste0(
+          condA, " (\\m{", .fmt_num(statsA$m),
+          "}, \\sd{", .fmt_num(statsA$sd), "}; ", pValueStr, esStr, ")"
+        )
+      }
+
+      findings[[length(findings) + 1]] <- list(
+        winner = winner,
+        winnerStats = winnerStats,
+        loserString = loserString
+      )
+    }
+  }
+
+  # 2. Group findings by Winner and construct sentences
+  sentences <- character(0)
+  if (length(findings) > 0) {
+    df_res <- do.call(rbind, lapply(findings, as.data.frame, stringsAsFactors = FALSE))
+
+    unique_winners <- unique(df_res$winner)
+
+    for (w in unique_winners) {
+      subset_res <- df_res[df_res$winner == w, ]
+
+      # Oxford-comma join of the beaten conditions
+      losers <- subset_res$loserString
+      n <- length(losers)
+
+      if (n == 1) {
+        joined_losers <- losers[1]
+      } else if (n == 2) {
+        joined_losers <- paste(losers, collapse = " and ")
+      } else {
+        joined_losers <- paste0(paste(losers[1:(n - 1)], collapse = ", "), ", and ", losers[n])
+      }
+
+      iv_cmd <- paste0("\\", iv)
+
+      final_str <- paste0(
+        "A post-hoc test found that ", dv, " for the ", iv_cmd, " ", w,
+        " was significantly higher ", subset_res$winnerStats[1],
+        " than for ", joined_losers, ". "
+      )
+
+      message(final_str)
+      sentences <- c(sentences, final_str)
+    }
+  }
+
+  if (!is.null(sink_to) && length(sentences) > 0) {
+    .write_tex(sentences, sink_to)
+  }
+  invisible(sentences)
+}
+
+
+#' Report ART contrasts (art.con) as a LaTeX table. Customizable with sensible
+#' defaults. Companion to [reportDunnTestTable()].
+#'
+#' Required commands in LaTeX:
+#' \code{\\newcommand{\\padjminor}{\\textit{p$_{adj}<$}}}
+#' \code{\\newcommand{\\padj}{\\textit{p$_{adj}$=}}}
+#' \code{\\newcommand{\\rankbiserial}[1]{$r_{rb} = #1$}}
+#'
+#' @param ac the contrast object returned by [ARTool::art.con()] (or its `summary()`)
+#' @param data the raw data frame used to fit the model
+#' @param iv independent variable (the contrasted factor)
+#' @param dv dependent variable
+#' @param paired whether to compute the rank-biserial effect size for paired
+#'   (within-subjects) data. Defaults to `FALSE`. When `TRUE`, `id` is required.
+#' @param id the subject/pairing column, used only when `paired = TRUE`. Replicate
+#'   trials per subject and condition are averaged before pairing.
+#' @param orderByP whether to order by the p value
+#' @param numberDigitsForPValue the number of digits to show
+#' @param latexSize which size for the text
+#' @param orderText whether to order the comparisons alphabetically; ignored when `orderByP = TRUE`
+#' @param sink_to optional path of a \code{.tex} file to write the table to,
+#'   so a manuscript can \code{\\input{}} it
+#'
+#' @return Invisibly returns the rendered LaTeX table as a string (or
+#'   \code{NULL} when xtable is unavailable); the table is also printed.
+#' @export
+#'
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ARTool", quietly = TRUE) &&
+#'   requireNamespace("emmeans", quietly = TRUE)) {
+#'   set.seed(123)
+#'   n <- 20
+#'   df <- data.frame(
+#'     UserID = factor(rep(seq_len(n), times = 3)),
+#'     mode   = factor(rep(c("Hand", "Eye", "Both"), each = n)),
+#'     prime  = factor(rep(rep(c("A", "B"), each = n / 2), times = 3))
+#'   )
+#'   df$score <- as.numeric(df$mode) * 2 + stats::rnorm(nrow(df))
+#'
+#'   m  <- ARTool::art(score ~ mode * prime + Error(UserID / mode), data = df)
+#'   ac <- ARTool::art.con(m, ~ mode, adjust = "holm")
+#'   reportArtConTable(ac, data = df, iv = "mode", dv = "score", paired = TRUE, id = "UserID")
+#' }
+#' }
+reportArtConTable <- function(ac, data, iv = "testiv", dv = "testdv", paired = FALSE, id = NULL, orderByP = FALSE, numberDigitsForPValue = 4, latexSize = "small", orderText = TRUE, sink_to = NULL) {
+  not_empty(ac)
+  not_empty(data)
+  not_empty(iv)
+  not_empty(dv)
+
+  src <- .art_con_to_df(ac)
+
+  table <- data.frame(
+    Comparison = as.character(src$contrast),
+    t = src$statistic,
+    df = src$df,
+    `p-adjusted` = src$p.value,
+    check.names = FALSE
+  )
+
+  # only show significant ones
+  table <- subset(table, `p-adjusted` < 0.05)
+
+  # Check if there are any significant results
+  if (nrow(table) == 0) {
+    no_diff_msg <- paste0("A post-hoc test found no significant differences for ", dv, ". ")
+    message(no_diff_msg)
+    if (!is.null(sink_to)) {
+      .write_tex(no_diff_msg, sink_to)
+    }
+    return(invisible(no_diff_msg))
+  }
+
+  # Calculate effect sizes for the significant comparisons
+  effectSizes <- numeric(nrow(table))
+  for (i in seq_len(nrow(table))) {
+    comparison <- as.character(table[i, "Comparison"])
+    parts <- strsplit(comparison, " - ", fixed = TRUE)[[1]]
+    firstCondition <- trimws(parts[1])
+    secondCondition <- trimws(parts[2])
+
+    tryCatch(
+      {
+        effectSizes[i] <- .art_con_effect_size(
+          data, iv, dv, firstCondition, secondCondition,
+          paired = paired, id = id
+        )
+      },
+      error = function(e) {
+        # Super-assign so the failure is recorded in the enclosing vector;
+        # a plain `<-` here would only mutate a discarded local copy.
+        effectSizes[i] <<- NA
+        warning(
+          "Effect size could not be computed for '", comparison, "': ",
+          conditionMessage(e),
+          call. = FALSE
+        )
+      }
+    )
+  }
+
+  # Add effect size column
+  table$r <- effectSizes
+
+  # orderByP takes precedence: previously the alphabetical sort below ran
+  # second and silently undid an explicitly requested p-value ordering.
+  if (orderByP) {
+    table <- table[order(table$`p-adjusted`), ]
+  } else if (orderText) {
+    table <- table[order(table$Comparison), ]
+  }
+
+  # Replace 0.000 with <0.001 automatically
+  table$`p-adjusted` <- ifelse(table$`p-adjusted` < 0.001, "<0.001",
+    formatC(table$`p-adjusted`, digits = numberDigitsForPValue, format = "f")
+  )
+
+  # Format effect size
+  table$r <- formatC(table$r, digits = 2, format = "f")
+
+  if (requireNamespace("xtable", quietly = TRUE)) {
+    xtable_obj <- xtable::xtable(table,
+      digits = c(0, 0, 2, 0, 0, 2),
+      caption = paste0(
+        "Post-hoc ART contrasts for independent variable \\", iv,
+        " and dependent variable \\", dv,
+        ". Positive t-values mean that the first-named level is sig. higher than the second-named (on the aligned-rank scale). For negative t-values, the opposite is true. Effect size reported as rank-biserial correlation (r)."
+      ),
+      label = paste0("tab:artcon-", iv, "-", dv)
+    )
+
+    latex_str <- print(xtable_obj, type = "latex", size = latexSize, caption.placement = "top", include.rownames = FALSE, print.results = FALSE)
+    cat(latex_str)
+    if (!is.null(sink_to)) {
+      .write_tex(latex_str, sink_to)
+    }
+    return(invisible(latex_str))
+  }
+
+  message(paste0(
+    "Post-hoc ART contrasts for independent variable \\", iv,
+    " and dependent variable \\", dv,
+    ". Positive t-values mean that the first-named level is sig. higher than the second-named (on the aligned-rank scale). For negative t-values, the opposite is true. Effect size reported as rank-biserial correlation (r).\n"
+  ))
+  print(table)
 
   invisible(NULL)
 }
