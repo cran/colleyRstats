@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Choosing the right test (and mixed models)</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Choosing the right test (and mixed
+models)</h1>
+
+
+
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(colleyRstats)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="co">#&gt; Loading required package: ggplot2</span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="co">#&gt; Registered S3 methods overwritten by &#39;ggpp&#39;:</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="co">#&gt;   method                  from   </span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="co">#&gt;   heightDetails.titleGrob ggplot2</span></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="co">#&gt;   widthDetails.titleGrob  ggplot2</span></span></code></pre></div>
+<p>Picking a statistical test is not a matter of taste: it follows from
+properties of the data. <code>colleyRstats</code> makes that reasoning
+explicit. This vignette walks through the decision helpers and then
+shows how to fit and report the models they recommend.</p>
+<div id="the-idea-scale-x-dependence-x-assumptions" class="section level2">
+<h2>The idea: scale x dependence x assumptions</h2>
+<p>A principled model choice is the product of three questions, in
+order:</p>
+<ol style="list-style-type: decimal">
+<li><strong>What is the outcome’s measurement scale?</strong> This fixes
+the model <em>family</em> (Gaussian, binomial, Poisson, cumulative-link)
+before anything else.</li>
+<li><strong>Are the observations independent or clustered?</strong>
+Repeated measures or any grouped structure needs random effects, i.e. a
+<em>mixed</em> model.</li>
+<li><strong>For a continuous outcome, do the parametric assumptions
+hold?</strong> Group-wise normality (and, between subjects, homogeneity
+of variance) decides between a parametric and a rank-based method.</li>
+</ol>
+<p><code>classify_outcome()</code> answers the first question. It maps a
+variable to one of <code>&quot;continuous&quot;</code>, <code>&quot;ordinal&quot;</code>,
+<code>&quot;binary&quot;</code>, <code>&quot;count&quot;</code>, or <code>&quot;nominal&quot;</code>
+using simple, transparent rules (ordered factor -&gt; ordinal; two
+distinct values -&gt; binary; a few-valued integer -&gt; ordinal/Likert;
+a non-negative integer with more values -&gt; count; anything else
+numeric -&gt; continuous).</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>n_id <span class="ot">&lt;-</span> <span class="dv">24</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">id   =</span> <span class="fu">factor</span>(<span class="fu">rep</span>(<span class="fu">seq_len</span>(n_id), <span class="at">each =</span> <span class="dv">3</span>)),</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">cond =</span> <span class="fu">factor</span>(<span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>, <span class="st">&quot;C&quot;</span>), <span class="at">times =</span> n_id))</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>)</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co"># Give condition a genuine effect so the example models are well identified.</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>step <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="dv">0</span>, <span class="at">B =</span> <span class="fl">1.3</span>, <span class="at">C =</span> <span class="fl">2.4</span>)[<span class="fu">as.character</span>(d<span class="sc">$</span>cond)]</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>d<span class="sc">$</span>score   <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(step <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="fu">nrow</span>(d)))</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>d<span class="sc">$</span>rating  <span class="ot">&lt;-</span> <span class="fu">ordered</span>(<span class="fu">pmin</span>(<span class="dv">5</span><span class="dt">L</span>, <span class="fu">pmax</span>(<span class="dv">1</span><span class="dt">L</span>, <span class="fu">round</span>(step <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="fu">nrow</span>(d), <span class="at">sd =</span> <span class="fl">0.7</span>) <span class="sc">+</span> <span class="dv">2</span>))))</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>d<span class="sc">$</span>correct <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(<span class="fu">nrow</span>(d), <span class="dv">1</span>, <span class="fu">plogis</span>(step <span class="sc">-</span> <span class="dv">1</span>))</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="fu">classify_outcome</span>(d<span class="sc">$</span>score)    <span class="co"># continuous</span></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a><span class="co">#&gt; [1] &quot;continuous&quot;</span></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="fu">classify_outcome</span>(d<span class="sc">$</span>rating)   <span class="co"># ordinal (ordered factor)</span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="co">#&gt; [1] &quot;ordinal&quot;</span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="fu">classify_outcome</span>(d<span class="sc">$</span>correct)  <span class="co"># binary (two distinct values)</span></span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="co">#&gt; [1] &quot;binary&quot;</span></span></code></pre></div>
+<p>Getting the scale right matters because it, not the analyst’s habit,
+dictates the family: a 1-5 rating is not an interval score, and a 0/1
+accuracy is not Gaussian. When a heuristic is genuinely ambiguous (a
+wide Likert item versus a small count) you can override it via the
+<code>outcome_type</code> argument of <code>recommend_test()</code>.</p>
+</div>
+<div id="recommend_test-as-the-decision-helper" class="section level2">
+<h2><code>recommend_test()</code> as the decision helper</h2>
+<p><code>recommend_test()</code> runs all three questions and returns a
+<code>&quot;colley_recommendation&quot;</code> object. It carries the fields that
+let you act on the advice: <code>recommendation</code> (a human-readable
+label), <code>model_function</code> (the R function to call),
+<code>reporter</code> (the matching colleyRstats reporter),
+<code>fit_call</code> (a ready-to-edit call), <code>rationale</code>
+(why), and <code>methods_text</code> (an APA-style sentence). A
+<code>print</code> method summarises it.</p>
+<p>The same outcome routes to different models depending on scale and
+dependence. An <strong>ordinal</strong> outcome measured repeatedly
+within <code>id</code> gives a cumulative link mixed model (CLMM):</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>rec_clmm <span class="ot">&lt;-</span> <span class="fu">recommend_test</span>(d, <span class="at">outcome =</span> <span class="st">&quot;rating&quot;</span>, <span class="at">predictors =</span> <span class="st">&quot;cond&quot;</span>, <span class="at">cluster =</span> <span class="st">&quot;id&quot;</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>rec_clmm</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt; &lt;colleyRstats analysis recommendation&gt;</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt;   Outcome        : rating (ordinal)</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt;   Predictors     : cond</span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt;   Design         : within (cluster: id)</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt;   Recommendation : Cumulative Link Mixed Model (CLMM)</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt;   Family         : cumulative link (logit)</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt;   Fit with       : ordinal::clmm(rating ~ cond + (1 | id), data = your_data)  # outcome must be an ordered factor</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt;   Report with    : reportCLMM()</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt;   Alternative(s) : nparLD (rank-based repeated measures) if proportional odds is untenable</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt;   Rationale      : the outcome is ordinal and the observations are clustered, so an ordinal (proportional-odds) model with a random effect is appropriate</span></span></code></pre></div>
+<p>A <strong>binary</strong> outcome with the same clustering gives a
+binomial generalized linear mixed model (GLMM):</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>rec_glmm <span class="ot">&lt;-</span> <span class="fu">recommend_test</span>(d, <span class="at">outcome =</span> <span class="st">&quot;correct&quot;</span>, <span class="at">predictors =</span> <span class="st">&quot;cond&quot;</span>, <span class="at">cluster =</span> <span class="st">&quot;id&quot;</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>rec_glmm</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co">#&gt; &lt;colleyRstats analysis recommendation&gt;</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt;   Outcome        : correct (binary)</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt;   Predictors     : cond</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt;   Design         : within (cluster: id)</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt;   Recommendation : Generalized Linear Mixed Model (GLMM), binomial</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt;   Family         : binomial (logit)</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt;   Fit with       : lme4::glmer(correct ~ cond + (1 | id), data = your_data, family = binomial)</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt;   Report with    : reportGLMM()</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt;   Alternative(s) : glmmTMB::glmmTMB(..., family = binomial) for more flexible random structures</span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt;   Rationale      : the outcome is binary and the observations are clustered, so a mixed-effects logistic regression is appropriate</span></span></code></pre></div>
+<p>A <strong>continuous</strong> outcome compared
+<strong>between</strong> subjects (no <code>cluster</code>) triggers the
+assumption checks and lands on ANOVA or its rank-based fallback:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>rec_anova <span class="ot">&lt;-</span> <span class="fu">recommend_test</span>(d, <span class="at">outcome =</span> <span class="st">&quot;score&quot;</span>, <span class="at">predictors =</span> <span class="st">&quot;cond&quot;</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; Registered S3 method overwritten by &#39;car&#39;:</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt;   method           from</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt;   na.action.merMod lme4</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>rec_anova</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; &lt;colleyRstats analysis recommendation&gt;</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt;   Outcome        : score (continuous)</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt;   Predictors     : cond</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt;   Design         : between</span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt;   Normality      : not rejected</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt;   Homogeneity    : not rejected</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt;   Recommendation : One-way ANOVA (parametric)</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt;   Family         : gaussian</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt;   Fit with       : ggbetweenstatsWithPriorNormalityCheck(data = your_data, x = &quot;cond&quot;, y = &quot;score&quot;)</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt;   Report with    : reportggstatsplot()</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt;   Alternative(s) : none needed</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt;   Rationale      : the outcome is continuous and normally distributed with homogeneous variances, so a parametric ANOVA is appropriate</span></span></code></pre></div>
+<p>Each recommendation also exposes machine-usable fields and a
+paste-ready methods sentence:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>rec_clmm<span class="sc">$</span>model_function</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">#&gt; [1] &quot;ordinal::clmm&quot;</span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>rec_clmm<span class="sc">$</span>reporter</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;reportCLMM&quot;</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>rec_clmm<span class="sc">$</span>fit_call</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#&gt; [1] &quot;ordinal::clmm(rating ~ cond + (1 | id), data = your_data)  # outcome must be an ordered factor&quot;</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="fu">cat</span>(rec_glmm<span class="sc">$</span>methods_text)</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt; The outcome `correct` is binary, and the observations are clustered within `id` (24 clusters, 72 observations). A Generalized Linear Mixed Model (GLMM), binomial (`lme4::glmer`) is therefore recommended; report it with `reportGLMM()`.</span></span></code></pre></div>
+</div>
+<div id="fitting-and-reporting-the-recommended-models" class="section level2">
+<h2>Fitting and reporting the recommended models</h2>
+<p>Once a model is fitted, the reporters turn it into manuscript-ready
+LaTeX/APA sentences, one per fixed-effect term, with the effect size,
+its confidence interval, the test statistic, and the p-value.
+<code>reportGLMM()</code> handles <code>lme4::lmer</code> /
+<code>lme4::glmer</code> / <code>glmmTMB::glmmTMB</code> and plain
+<code>lm</code>/<code>glm</code>; <code>reportCLMM()</code> handles
+<code>ordinal::clmm</code> / <code>ordinal::clm</code>. The reporters
+pick the effect-size scale from the family: <strong>odds ratios</strong>
+for binomial and cumulative-link models, <strong>incidence-rate
+ratios</strong> for counts, and raw coefficients (<code>b</code>) with a
+<code>t</code>/<code>z</code> statistic for Gaussian fits.</p>
+<p>The fits below require <strong>lme4</strong>,
+<strong>ordinal</strong>, and <strong>parameters</strong> (all in
+Suggests), so the chunk is guarded by <code>has_mixed</code>; the
+vignette still builds without them.</p>
+<p>For the <strong>ordinal</strong> recommendation, fit the CLMM and
+report it with <code>reportCLMM()</code>. Because the family is
+cumulative-link, the effects are reported as odds ratios (the
+multiplicative change in the odds of a higher rating):</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>m_clmm <span class="ot">&lt;-</span> ordinal<span class="sc">::</span><span class="fu">clmm</span>(rating <span class="sc">~</span> cond <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> id), <span class="at">data =</span> d)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="fu">reportCLMM</span>(m_clmm, <span class="at">dv =</span> <span class="st">&quot;rating&quot;</span>)</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt; A cumulative link mixed model was fitted for rating.</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">#&gt; The effect of \textit{condB} on rating was significant ($OR = 309.89$, 95\% CI $[26.21, 3664.40]$, $z = 4.55$, \pminor{0.001}).</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co">#&gt; The effect of \textit{condC} on rating was significant ($OR = 10085.81$, 95\% CI $[384.31, 264688.17]$, $z = 5.53$, \pminor{0.001}).</span></span></code></pre></div>
+<p>For the <strong>binary</strong> recommendation, fit the binomial GLMM
+and report it with <code>reportGLMM()</code>; the binomial family is
+likewise exponentiated to odds ratios, with a <code>z</code>
+statistic:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>m_glmm <span class="ot">&lt;-</span> lme4<span class="sc">::</span><span class="fu">glmer</span>(correct <span class="sc">~</span> cond <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> id), <span class="at">data =</span> d, <span class="at">family =</span> binomial)</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt; boundary (singular) fit: see help(&#39;isSingular&#39;)</span></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="fu">reportGLMM</span>(m_glmm, <span class="at">dv =</span> <span class="st">&quot;accuracy&quot;</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt; A generalized linear mixed model was fitted for accuracy.</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt; The effect of \textit{condB} on accuracy was not significant ($OR = 2.80$, 95\% CI $[0.87, 9.06]$, $z = 1.72$, \p{0.086}).</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; The effect of \textit{condC} on accuracy was significant ($OR = 7.60$, 95\% CI $[2.07, 27.89]$, $z = 3.06$, \p{0.002}).</span></span></code></pre></div>
+<p><code>reportGLMM()</code> also covers <strong>Gaussian</strong> mixed
+and ordinary models. Here a linear mixed model is reported on the raw
+coefficient scale, with <code>b</code> and a <code>t(df)</code>
+statistic rather than an odds ratio – the reporter adapts the wording to
+the family automatically:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>m_lmm <span class="ot">&lt;-</span> lme4<span class="sc">::</span><span class="fu">lmer</span>(score <span class="sc">~</span> cond <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> id), <span class="at">data =</span> d)</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="co">#&gt; boundary (singular) fit: see help(&#39;isSingular&#39;)</span></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="fu">reportGLMM</span>(m_lmm, <span class="at">dv =</span> <span class="st">&quot;score&quot;</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co">#&gt; A linear mixed model was fitted for score.</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co">#&gt; The effect of \textit{condB} on score was significant ($b = 1.28$, 95\% CI $[0.74, 1.81]$, $t(67) = 4.77$, \pminor{0.001}).</span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="co">#&gt; The effect of \textit{condC} on score was significant ($b = 2.20$, 95\% CI $[1.67, 2.73]$, $t(67) = 8.21$, \pminor{0.001}).</span></span></code></pre></div>
+<p>Both reporters return the sentences invisibly (and emit them via
+<code>message()</code>), and can optionally copy to the clipboard
+(<code>write_to_clipboard = TRUE</code>) or write a <code>.tex</code>
+file to <code>\input{}</code> in a manuscript (<code>sink_to =</code>).
+The LaTeX uses the <code>\p</code> / <code>\pminor</code> macros from
+<code>latex_preamble()</code>.</p>
+</div>
+<div id="next-steps" class="section level2">
+<h2>Next steps</h2>
+<ul>
+<li>Override an ambiguous scale with
+<code>recommend_test(..., outcome_type = ...)</code>.</li>
+<li>For non-parametric routes surfaced by the continuous branch, see
+<code>reportDunnTest()</code>, <code>reportArtCon()</code>, and
+<code>reportNparLD()</code>.</li>
+<li>Use <code>rec$methods_text</code> as a first draft of the Methods
+paragraph.</li>
+</ul>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>From R to Overleaf: publication-ready output</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">From R to Overleaf: publication-ready
+output</h1>
+
+
+
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(colleyRstats)</span></code></pre></div>
+<p><code>colleyRstats</code> reporters produce LaTeX so your analysis
+can flow straight into a manuscript. This vignette shows how to get that
+output into a LaTeX/Overleaf project with the least friction, and – just
+as importantly – how to make sure the generated <code>.tex</code> always
+compiles.</p>
+<div id="the-two-macro-modes" class="section level2">
+<h2>The two macro modes</h2>
+<p>By default the reporters emit <strong>compact macros</strong> such as
+<code>\F{}{}{}</code>, <code>\p{}</code>, and <code>\m{}</code> instead
+of raw math. This keeps the sentences short and gives you one central
+place to control how every statistic is typeset. The trade-off is that
+these macros must be defined in your document’s preamble, otherwise
+LaTeX stops with an “Undefined control sequence” error.</p>
+<p><code>latex_preamble()</code> prints (and optionally writes) the
+definitions so you can paste them into a preamble:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">latex_preamble</span>()</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co">#&gt; % colleyRstats: LaTeX commands required by the report functions</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt; \newcommand{\F}[3]{$F({#1},{#2})={#3}$}</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt; \newcommand{\p}{\textit{p=}}</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co">#&gt; \newcommand{\pminor}{\textit{p$&lt;$}}</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co">#&gt; \newcommand{\padj}{\textit{p$_{adj}$=}}</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt; \newcommand{\padjminor}{\textit{p$_{adj}&lt;$}}</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt; \newcommand{\m}{\textit{M=}}</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt; \newcommand{\sd}{\textit{SD=}}</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#&gt; \newcommand{\df}{\textit{df=}}</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt; \newcommand{\chisq}{$\chi^2$}</span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="co">#&gt; \newcommand{\rankbiserial}[1]{$r_{rb} = #1$}</span></span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a><span class="co">#&gt; \newcommand{\effectsize}{\textit{r=}}</span></span></code></pre></div>
+<p>For an Overleaf project it is cleaner to ship the definitions as a
+package. <code>use_colleyrstats_sty(dir)</code> writes
+<code>colleyRstats.sty</code>; upload that file and add a single
+<code>\usepackage{colleyRstats}</code> to your document. We write into
+<code>tempdir()</code> here so the vignette leaves nothing behind.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>sty_path <span class="ot">&lt;-</span> <span class="fu">use_colleyrstats_sty</span>(<span class="fu">tempdir</span>(), <span class="at">overwrite =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; Wrote &#39;C:\Users\Mark\AppData\Local\Temp\Rtmpc5y6Bw/colleyRstats.sty&#39;. Add \usepackage{colleyRstats} to your document.</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>sty_path</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;C:\\Users\\Mark\\AppData\\Local\\Temp\\Rtmpc5y6Bw/colleyRstats.sty&quot;</span></span></code></pre></div>
+<p>If you would rather not carry a preamble at all, set
+<code>options(colleyRstats.macros = FALSE)</code>. The sinks and the
+<code>emit_overleaf()</code> bundle then expand every macro to
+<strong>plain math</strong> via <code>expand_latex_macros()</code>, so
+the output is self-contained. You can call the expander directly to see
+what the compact form turns into:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">expand_latex_macros</span>(<span class="st">&quot;A significant effect (</span><span class="sc">\\</span><span class="st">F{2}{57}{4.50}, </span><span class="sc">\\</span><span class="st">p{0.012}).&quot;</span>))</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co">#&gt; A significant effect ($F(2, 57) = 4.50$, $p = 0.012$).</span></span></code></pre></div>
+<p>Whichever mode you use, any text you place into LaTeX – a variable
+name, a factor level – must be escaped so characters like <code>_</code>
+and <code>%</code> do not break the build. <code>latex_escape()</code>
+handles that:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">latex_escape</span>(<span class="st">&quot;tlx_mental (%)&quot;</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; [1] &quot;tlx\\_mental (\\%)&quot;</span></span></code></pre></div>
+</div>
+<div id="tables" class="section level2">
+<h2>Tables</h2>
+<p><code>reportDunnTestTable()</code> and
+<code>reportArtConTable()</code> render a full post-hoc comparison table
+as LaTeX. Both accept <code>style = c(&quot;hline&quot;, &quot;booktabs&quot;)</code>: use
+<code>&quot;booktabs&quot;</code> for the cleaner rules most journals prefer.
+Rendering a table needs the <strong>xtable</strong> package, and
+computing a Dunn test from raw data additionally needs
+<strong>FSA</strong>, so the demo below is guarded and only runs when
+both are installed.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>tbl_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="at">group =</span> <span class="fu">factor</span>(<span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>, <span class="st">&quot;C&quot;</span>), <span class="at">each =</span> <span class="dv">12</span>)),</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  <span class="at">score =</span> <span class="fu">c</span>(<span class="fu">rnorm</span>(<span class="dv">12</span>, <span class="dv">50</span>), <span class="fu">rnorm</span>(<span class="dv">12</span>, <span class="dv">54</span>), <span class="fu">rnorm</span>(<span class="dv">12</span>, <span class="dv">58</span>))</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>)</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="fu">reportDunnTestTable</span>(</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>  <span class="at">data =</span> tbl_df,</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>  <span class="at">iv =</span> <span class="st">&quot;group&quot;</span>,</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>  <span class="at">dv =</span> <span class="st">&quot;score&quot;</span>,</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>  <span class="at">style =</span> <span class="st">&quot;booktabs&quot;</span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>)</span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co">#&gt;   Kruskal-Wallis rank sum test</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co">#&gt; data: x and g</span></span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a><span class="co">#&gt; Kruskal-Wallis chi-squared = 31.1351, df = 2, p-value = 0</span></span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a><span class="co">#&gt;                       Dunn&#39;s Pairwise Comparison of x by g                      </span></span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a><span class="co">#&gt;                                      (Holm)                                     </span></span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a><span class="co">#&gt; Col Mean-│</span></span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a><span class="co">#&gt; Row Mean │          A          B</span></span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a><span class="co">#&gt; ─────────┼──────────────────────</span></span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a><span class="co">#&gt;        B │  -2.789943</span></span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a><span class="co">#&gt;          │     0.0105*</span></span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a><span class="co">#&gt;          │</span></span>
+<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a><span class="co">#&gt;        C │  -5.579886  -2.789943</span></span>
+<span id="cb6-29"><a href="#cb6-29" tabindex="-1"></a><span class="co">#&gt;          │     0.0000*    0.0053*</span></span>
+<span id="cb6-30"><a href="#cb6-30" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-31"><a href="#cb6-31" tabindex="-1"></a><span class="co">#&gt; FWER = 0.05</span></span>
+<span id="cb6-32"><a href="#cb6-32" tabindex="-1"></a><span class="co">#&gt; Reject Ho if adjusted p ≤ FWER with stopping rule, where (unadjusted) p = Pr(|Z| ≥ |z|)</span></span>
+<span id="cb6-33"><a href="#cb6-33" tabindex="-1"></a><span class="co">#&gt; % latex table generated in R 4.6.0 by xtable 1.8-8 package</span></span>
+<span id="cb6-34"><a href="#cb6-34" tabindex="-1"></a><span class="co">#&gt; % Mon Jul  6 09:27:43 2026</span></span>
+<span id="cb6-35"><a href="#cb6-35" tabindex="-1"></a><span class="co">#&gt; \begin{table}[ht]</span></span>
+<span id="cb6-36"><a href="#cb6-36" tabindex="-1"></a><span class="co">#&gt; \centering</span></span>
+<span id="cb6-37"><a href="#cb6-37" tabindex="-1"></a><span class="co">#&gt; \caption{Post-hoc comparisons for independent variable \group and dependent variable \score. Positive Z-values mean that the first-named level is sig. higher than the second-named. For negative Z-values, the opposite is true. Effect size reported as rank-biserial correlation (r).} </span></span>
+<span id="cb6-38"><a href="#cb6-38" tabindex="-1"></a><span class="co">#&gt; \label{tab:posthoc-group-score}</span></span>
+<span id="cb6-39"><a href="#cb6-39" tabindex="-1"></a><span class="co">#&gt; \begingroup\small</span></span>
+<span id="cb6-40"><a href="#cb6-40" tabindex="-1"></a><span class="co">#&gt; \begin{tabular}{lrll}</span></span>
+<span id="cb6-41"><a href="#cb6-41" tabindex="-1"></a><span class="co">#&gt;   \toprule</span></span>
+<span id="cb6-42"><a href="#cb6-42" tabindex="-1"></a><span class="co">#&gt; Comparison &amp; Z &amp; p-adjusted &amp; r \\ </span></span>
+<span id="cb6-43"><a href="#cb6-43" tabindex="-1"></a><span class="co">#&gt;   \midrule</span></span>
+<span id="cb6-44"><a href="#cb6-44" tabindex="-1"></a><span class="co">#&gt; A - B &amp; -2.7899 &amp; 0.0105 &amp; 1.00 \\ </span></span>
+<span id="cb6-45"><a href="#cb6-45" tabindex="-1"></a><span class="co">#&gt;   A - C &amp; -5.5799 &amp; $&lt;$0.001 &amp; 1.00 \\ </span></span>
+<span id="cb6-46"><a href="#cb6-46" tabindex="-1"></a><span class="co">#&gt;   B - C &amp; -2.7899 &amp; 0.0053 &amp; 1.00 \\ </span></span>
+<span id="cb6-47"><a href="#cb6-47" tabindex="-1"></a><span class="co">#&gt;    \bottomrule</span></span>
+<span id="cb6-48"><a href="#cb6-48" tabindex="-1"></a><span class="co">#&gt; \end{tabular}</span></span>
+<span id="cb6-49"><a href="#cb6-49" tabindex="-1"></a><span class="co">#&gt; \endgroup</span></span>
+<span id="cb6-50"><a href="#cb6-50" tabindex="-1"></a><span class="co">#&gt; \end{table}</span></span></code></pre></div>
+<p>If <code>FSA</code>/<code>xtable</code> are not available the chunk
+above is skipped so the vignette still builds.</p>
+</div>
+<div id="reproducible-values" class="section level2">
+<h2>Reproducible values</h2>
+<p>The most robust way to keep numbers in your prose correct is to never
+type them by hand. <code>define_result_macro()</code> emits a
+<code>\newcommand</code> you reference in the text; re-running the R
+code updates the number everywhere it appears.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">define_result_macro</span>(<span class="st">&quot;tlx_mental_omnibus&quot;</span>, <span class="st">&quot;F(2, 57) = 4.50, p = .02&quot;</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co">#&gt; \newcommand{\tlxMentalOmnibus}{F(2, 57) = 4.50, p = .02}</span></span></code></pre></div>
+<p>The label is sanitised to a valid (letters-only) command name – here
+<code>\tlxMentalOmnibus</code> – which you then use in prose as
+<code>... omnibus effect (\tlxMentalOmnibus).</code></p>
+<p>Variable and factor-level names deserve the same treatment. When the
+reporters emit a name like <code>\Video</code>, that command must exist
+too. <code>emit_name_macros()</code> generates the matching
+<code>\newcommand</code> stubs so those names are never undefined:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">emit_name_macros</span>(<span class="fu">c</span>(<span class="st">&quot;Video&quot;</span>, <span class="st">&quot;DriverPosition&quot;</span>))</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt; \newcommand{\Video}{Video}</span></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt; \newcommand{\DriverPosition}{DriverPosition}</span></span></code></pre></div>
+</div>
+<div id="the-one-call-bundle" class="section level2">
+<h2>The one-call bundle</h2>
+<p><code>emit_overleaf()</code> is the end of the pipeline: it turns a
+<code>report_all()</code> / <code>analyze_and_report()</code> result –
+or, as here, a plain named list of sentence vectors – into a folder you
+can drag straight into Overleaf. It writes <code>main.tex</code>,
+<code>results.tex</code>, one <code>sections/*.tex</code> per result,
+<code>references.bib</code>, <code>colleyRstats.sty</code>, and (when
+the text contains name macros) <code>names.tex</code>.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>study <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">results =</span> <span class="fu">list</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  <span class="at">workload =</span> <span class="fu">list</span>(</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>    <span class="at">sentences =</span> <span class="st">&quot;A significant main effect of </span><span class="sc">\\</span><span class="st">Video on workload (</span><span class="sc">\\</span><span class="st">F{2}{57}{4.50}, </span><span class="sc">\\</span><span class="st">p{0.012}).&quot;</span>,</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>    <span class="at">plot =</span> <span class="cn">NULL</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>  ),</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>  <span class="at">trust =</span> <span class="fu">list</span>(</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>    <span class="at">sentences =</span> <span class="st">&quot;No significant effect on trust (</span><span class="sc">\\</span><span class="st">p{0.45}).&quot;</span>,</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>    <span class="at">plot =</span> <span class="cn">NULL</span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>  )</span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>))</span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">emit_overleaf</span>(study, <span class="at">dir =</span> <span class="fu">file.path</span>(<span class="fu">tempdir</span>(), <span class="st">&quot;paper&quot;</span>), <span class="at">overwrite =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt; Wrote an Overleaf-ready project to &#39;C:\Users\Mark\AppData\Local\Temp\Rtmpc5y6Bw/paper&#39; (2 sections; \usepackage{colleyRstats}).</span></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="fu">list.files</span>(out<span class="sc">$</span>dir, <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co">#&gt; [1] &quot;colleyRstats.sty&quot;      &quot;main.tex&quot;              &quot;names.tex&quot;            </span></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt; [4] &quot;references.bib&quot;        &quot;results.tex&quot;           &quot;sections/trust.tex&quot;   </span></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="co">#&gt; [7] &quot;sections/workload.tex&quot;</span></span></code></pre></div>
+<p>The generated <code>main.tex</code> already <code>\usepackage</code>s
+the shipped <code>colleyRstats.sty</code>, so this project compiles
+as-is. To drop the preamble dependency entirely, switch to plain mode:
+the same call then expands the macros inline and omits the
+<code>.sty</code>.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>old <span class="ot">&lt;-</span> <span class="fu">options</span>(<span class="at">colleyRstats.macros =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>plain <span class="ot">&lt;-</span> <span class="fu">emit_overleaf</span>(study, <span class="at">dir =</span> <span class="fu">file.path</span>(<span class="fu">tempdir</span>(), <span class="st">&quot;paper-plain&quot;</span>), <span class="at">overwrite =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="co">#&gt; Wrote an Overleaf-ready project to &#39;C:\Users\Mark\AppData\Local\Temp\Rtmpc5y6Bw/paper-plain&#39; (2 sections; macros expanded inline).</span></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a><span class="fu">options</span>(old)</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="fu">list.files</span>(plain<span class="sc">$</span>dir, <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co">#&gt; [1] &quot;main.tex&quot;              &quot;names.tex&quot;             &quot;references.bib&quot;       </span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co">#&gt; [4] &quot;results.tex&quot;           &quot;sections/trust.tex&quot;    &quot;sections/workload.tex&quot;</span></span></code></pre></div>
+<p>Notice there is no <code>colleyRstats.sty</code> in the plain output
+– every statistic has been expanded to standalone math, so the folder
+compiles without a preamble. Either way, the result is a LaTeX project
+that goes from R to a compiled PDF with no manual editing of
+numbers.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
