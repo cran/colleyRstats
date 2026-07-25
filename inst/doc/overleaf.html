@@ -377,9 +377,9 @@ package. <code>use_colleyrstats_sty(dir)</code> writes
 <code>\usepackage{colleyRstats}</code> to your document. We write into
 <code>tempdir()</code> here so the vignette leaves nothing behind.</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>sty_path <span class="ot">&lt;-</span> <span class="fu">use_colleyrstats_sty</span>(<span class="fu">tempdir</span>(), <span class="at">overwrite =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; Wrote &#39;C:\Users\Mark\AppData\Local\Temp\RtmpOyntc5/colleyRstats.sty&#39;. Add \usepackage{colleyRstats} to your document.</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; Wrote &#39;C:\Users\Mark\AppData\Local\Temp\Rtmpu0hB3L/colleyRstats.sty&#39;. Add \usepackage{colleyRstats} to your document.</span></span>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>sty_path</span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;C:\\Users\\Mark\\AppData\\Local\\Temp\\RtmpOyntc5/colleyRstats.sty&quot;</span></span></code></pre></div>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;C:\\Users\\Mark\\AppData\\Local\\Temp\\Rtmpu0hB3L/colleyRstats.sty&quot;</span></span></code></pre></div>
 <p>If you would rather not carry a preamble at all, set
 <code>options(colleyRstats.macros = FALSE)</code>. The sinks and the
 <code>emit_overleaf()</code> bundle then expand every macro to
@@ -438,7 +438,7 @@ both are installed.</p>
 <span id="cb6-31"><a href="#cb6-31" tabindex="-1"></a><span class="co">#&gt; FWER = 0.05</span></span>
 <span id="cb6-32"><a href="#cb6-32" tabindex="-1"></a><span class="co">#&gt; Reject Ho if adjusted p ≤ FWER with stopping rule, where (unadjusted) p = Pr(|Z| ≥ |z|)</span></span>
 <span id="cb6-33"><a href="#cb6-33" tabindex="-1"></a><span class="co">#&gt; % latex table generated in R 4.6.0 by xtable 1.8-8 package</span></span>
-<span id="cb6-34"><a href="#cb6-34" tabindex="-1"></a><span class="co">#&gt; % Thu Jul 16 21:44:47 2026</span></span>
+<span id="cb6-34"><a href="#cb6-34" tabindex="-1"></a><span class="co">#&gt; % Sat Jul 25 14:34:19 2026</span></span>
 <span id="cb6-35"><a href="#cb6-35" tabindex="-1"></a><span class="co">#&gt; \begin{table}[ht]</span></span>
 <span id="cb6-36"><a href="#cb6-36" tabindex="-1"></a><span class="co">#&gt; \centering</span></span>
 <span id="cb6-37"><a href="#cb6-37" tabindex="-1"></a><span class="co">#&gt; \caption{Post-hoc comparisons for independent variable \group and dependent variable \score. Positive Z-values mean that the first-named level is sig. higher than the second-named. For negative Z-values, the opposite is true. Effect size reported as rank-biserial correlation (r).} </span></span>
@@ -498,7 +498,7 @@ the text contains name macros) <code>names.tex</code>.</p>
 <span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>))</span>
 <span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a></span>
 <span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">emit_overleaf</span>(study, <span class="at">dir =</span> <span class="fu">file.path</span>(<span class="fu">tempdir</span>(), <span class="st">&quot;paper&quot;</span>), <span class="at">overwrite =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt; Wrote an Overleaf-ready project to &#39;C:\Users\Mark\AppData\Local\Temp\RtmpOyntc5/paper&#39; (2 sections; \usepackage{colleyRstats}).</span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt; Wrote an Overleaf-ready project to &#39;C:\Users\Mark\AppData\Local\Temp\Rtmpu0hB3L/paper&#39; (2 sections; \usepackage{colleyRstats}).</span></span>
 <span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="fu">list.files</span>(out<span class="sc">$</span>dir, <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co">#&gt; [1] &quot;colleyRstats.sty&quot;      &quot;main.tex&quot;              &quot;names.tex&quot;            </span></span>
 <span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt; [4] &quot;references.bib&quot;        &quot;results.tex&quot;           &quot;sections/trust.tex&quot;   </span></span>
@@ -510,7 +510,7 @@ the same call then expands the macros inline and omits the
 <code>.sty</code>.</p>
 <div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>old <span class="ot">&lt;-</span> <span class="fu">options</span>(<span class="at">colleyRstats.macros =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>plain <span class="ot">&lt;-</span> <span class="fu">emit_overleaf</span>(study, <span class="at">dir =</span> <span class="fu">file.path</span>(<span class="fu">tempdir</span>(), <span class="st">&quot;paper-plain&quot;</span>), <span class="at">overwrite =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="co">#&gt; Wrote an Overleaf-ready project to &#39;C:\Users\Mark\AppData\Local\Temp\RtmpOyntc5/paper-plain&#39; (2 sections; macros expanded inline).</span></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="co">#&gt; Wrote an Overleaf-ready project to &#39;C:\Users\Mark\AppData\Local\Temp\Rtmpu0hB3L/paper-plain&#39; (2 sections; macros expanded inline).</span></span>
 <span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a><span class="fu">options</span>(old)</span>
 <span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a></span>
 <span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="fu">list.files</span>(plain<span class="sc">$</span>dir, <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
